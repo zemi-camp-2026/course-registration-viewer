@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>管理｜受講科目登録・閲覧システム</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="page">
+  <div style="height:16px"></div>
+  <div class="tabbar">
+    <button id="tab-members" class="active">メンバー管理</button>
+    <button id="tab-rollover">年度更新</button>
+  </div>
+
+  <!-- タブ1: メンバー管理 -->
+  <div class="card" id="pane-members" style="margin-top:0">
+    <h2>メンバー管理</h2>
+    <div class="controls" style="padding:0 0 12px">
+      <div class="panel">
+        <input type="text" id="add-snum" placeholder="学番" style="width:100px">
+        <input type="text" id="add-name" placeholder="氏名" style="width:140px">
+        <select id="add-grade">
+          <option>B3</option><option>B4</option><option>M1</option><option>M2</option>
+          <option value="teacher">教員</option>
+        </select>
+        <button class="btn btn-primary btn-sm" id="add-btn">追加</button>
+      </div>
+      <span class="error-msg" id="member-err" style="align-self:center"></span>
+    </div>
+    <table class="list" id="member-table">
+      <thead><tr><th>学番</th><th>氏名</th><th>学年</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- タブ2: 年度更新ウィザード -->
+  <div class="card" id="pane-rollover" style="margin-top:0;display:none">
+    <h2>年度更新</h2>
+    <p style="font-size:13px">卒業するメンバーの削除・在校生の進級・新入生の追加をまとめて実行します。<br>
+      <strong>削除された人の受講データは全学期分消え、元に戻せません。</strong>下の表をよく確認してから実行してください。</p>
+    <div class="field" style="max-width:200px">
+      <label>新年度（西暦）</label>
+      <input type="number" id="ro-year">
+    </div>
+    <table class="list" id="ro-table">
+      <thead><tr><th>学番</th><th>氏名</th><th>現在</th><th>年度更新後</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="field">
+      <label>新入生（1行に1人: 学番,氏名,学年）</label>
+      <textarea id="ro-new" rows="4" style="width:100%;border:1.5px solid #e9d3b3;border-radius:10px;font:inherit;padding:10px"
+        placeholder="B3011,新入 太郎,B3&#10;B3012,新入 花子,B3"></textarea>
+    </div>
+    <p class="error-msg" id="ro-err"></p>
+    <button class="btn btn-danger" id="ro-btn">年度更新を実行する</button>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+<script>
+let me;
+
+// ---- タブ切替 ----
+for (const [btn, pane] of [['tab-members', 'pane-members'], ['tab-rollover', 'pane-rollover']]) {
+  document.getElementById(btn).addEventListener('click', () => {
+    document.querySelectorAll('.tabbar button').forEach((b) => b.classList.remove('active'));
+    document.getElementById(btn).classList.add('active');
+    document.getElementById('pane-members').style.display = btn === 'tab-members' ? '' : 'none';
+    document.getElementById('pane-rollover').style.display = btn === 'tab-rollover' ? '' : 'none';
+    if (btn === 'tab-rollover') loadRollover();
+  });
+}
+
+// ---- タブ1: メンバー管理 ----
+async function loadMembers() {
+  const { users } = await api('/api/users');
+  const tbody = document.querySelector('#member-table tbody');
+  tbody.innerHTML = '';
+  for (const u of users) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${u.student_number}</td>
+      <td>${u.name}</td>
+      <td>${badge(u.grade_label)}</td>
+      <td><button class="btn btn-danger btn-sm" data-act="del" ${u.id === me.id ? 'disabled' : ''}>削除</button></td>`;
+    tr.querySelector('[data-act="del"]').addEventListener('click', async () => {
+      const detail = await api(`/api/users/${u.id}`);
+      if (!confirm(`${u.name} さんを削除します。\n登録済みの受講コマ ${detail.entry_count} 件も全学期分一緒に消えます。\nこの操作は取り消せません。よろしいですか？`)) return;
+      await api(`/api/users/${u.id}`, { method: 'DELETE' });
+      loadMembers();
+    });
+    tbody.appendChild(tr);
+  }
+}
+
+document.getElementById('add-btn').addEventListener('click', async () => {
+  const err = document.getElementById('member-err');
+  err.textContent = '';
+  const gradeSel = document.getElementById('add-grade').value;
+  try {
+    await api('/api/users', {
+      method: 'POST',
+      body: {
+        student_number: document.getElementById('add-snum').value.trim(),
+        name: document.getElementById('add-name').value.trim(),
+        role: gradeSel === 'teacher' ? 'teacher' : 'student',
+        grade: gradeSel === 'teacher' ? null : gradeSel,
+      },
+    });
+    document.getElementById('add-snum').value = '';
+    document.getElementById('add-name').value = '';
+    loadMembers();
+  } catch (e) { err.textContent = e.message; }
+});
+
+// ---- タブ2: 年度更新 ----
+const NEXT_GRADE = { B3: 'B4', B4: 'M1', M1: 'M2', M2: null }; // null = 卒業（削除）を初期提案
+
+async function loadRollover() {
+  const [{ users }, { quarters }] = await Promise.all([api('/api/users'), api('/api/quarters')]);
+  const activeYear = (quarters.find((q) => q.is_active) ?? quarters.at(-1))?.year ?? new Date().getFullYear();
+  document.getElementById('ro-year').value = activeYear + 1;
+
+  const tbody = document.querySelector('#ro-table tbody');
+  tbody.innerHTML = '';
+  for (const u of users) {
+    if (u.role === 'teacher') continue;
+    const suggested = NEXT_GRADE[u.grade];
+    const tr = document.createElement('tr');
+    tr.dataset.userId = u.id;
+    tr.dataset.grade = u.grade;
+    tr.innerHTML = `
+      <td>${u.student_number}</td>
+      <td>${u.name}</td>
+      <td>${badge(u.grade_label)}</td>
+      <td><select class="ro-plan">
+        <option value="keep">そのまま（${u.grade}）</option>
+        ${['B4', 'M1', 'M2'].map((g) => `<option value="${g}" ${g === suggested ? 'selected' : ''}>進級 → ${g}</option>`).join('')}
+        <option value="delete" ${suggested === null ? 'selected' : ''}>卒業（削除）</option>
+      </select></td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+document.getElementById('ro-btn').addEventListener('click', async () => {
+  const err = document.getElementById('ro-err');
+  err.textContent = '';
+  const newYear = Number(document.getElementById('ro-year').value);
+  const deleteIds = [];
+  const promotions = [];
+  for (const tr of document.querySelectorAll('#ro-table tbody tr')) {
+    const plan = tr.querySelector('.ro-plan').value;
+    const id = Number(tr.dataset.userId);
+    if (plan === 'delete') deleteIds.push(id);
+    else if (plan !== 'keep') promotions.push({ user_id: id, new_grade: plan });
+  }
+  const newMembers = document.getElementById('ro-new').value.split('\n')
+    .map((l) => l.trim()).filter(Boolean)
+    .map((l) => {
+      const [student_number, name, grade] = l.split(',').map((s) => s?.trim());
+      return { student_number, name, grade };
+    });
+  if (newMembers.some((m) => !m.student_number || !m.name || !m.grade)) {
+    err.textContent = '新入生の行は「学番,氏名,学年」の形式で入力してください';
+    return;
+  }
+  if (!confirm(
+    `${newYear}年度への更新を実行します:\n` +
+    `・削除（卒業）: ${deleteIds.length}人（受講データも全部消えます・取り消し不可）\n` +
+    `・進級: ${promotions.length}人\n` +
+    `・新入生追加: ${newMembers.length}人\n` +
+    `・${newYear}年度の1Q〜4Qを作成し、1Qをアクティブにします\n\nよろしいですか？`
+  )) return;
+  try {
+    const res = await api('/api/admin/year-rollover', {
+      method: 'POST',
+      body: { new_year: newYear, delete_user_ids: deleteIds, promotions, new_members: newMembers },
+    });
+    alert(`年度更新が完了しました。\n削除 ${res.deleted_users}人 / 進級 ${res.promoted_users}人 / 追加 ${res.added_users}人`);
+    document.getElementById('ro-new').value = '';
+    loadMembers();
+    loadRollover();
+  } catch (e) { err.textContent = e.message; }
+});
+
+(async () => {
+  const user = await renderChrome('admin');
+  if (!user || !user.is_admin) { location.href = '/'; return; }
+  me = user;
+  await loadMembers();
+})();
+</script>
+</body>
+</html>

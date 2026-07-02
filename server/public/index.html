@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>受講科目登録・閲覧システム</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="page">
+  <div class="controls" id="controls">
+    <div class="panel" id="grade-filter">
+      <label><input type="checkbox" class="gf chk-b3" value="B3" checked>B3</label>
+      <label><input type="checkbox" class="gf chk-b4" value="B4" checked>B4</label>
+      <label><input type="checkbox" class="gf chk-m1" value="M1" checked>M1</label>
+      <label><input type="checkbox" class="gf chk-m2" value="M2" checked>M2</label>
+      <label><input type="checkbox" class="gf chk-prof" value="Prof" checked>教員</label>
+    </div>
+    <div class="panel">
+      <label><input type="checkbox" id="highlight" class="chk-hl">ハイライト</label>
+    </div>
+    <div class="panel">
+      <select id="mode">
+        <option value="summary">サマリ</option>
+        <option value="detail">詳細</option>
+      </select>
+    </div>
+    <div class="panel">
+      <span style="font-size:12px;color:#a97b3a">スポット表示</span>
+      <select id="spot"><option value="">全体図</option></select>
+    </div>
+    <button class="btn btn-primary" id="go-edit" style="margin-left:auto">📅 時間割登録・編集</button>
+  </div>
+  <h2 id="view-title" style="margin:14px 20px 0;font-size:16px;color:#a9743a"></h2>
+  <div class="grid-wrap"><div id="grid"></div></div>
+</div>
+
+<script src="/app.js"></script>
+<script>
+let tabs;
+
+function selectedGrades() {
+  return [...document.querySelectorAll('.gf:checked')].map((el) => el.value);
+}
+
+// 行=時限 / 列=曜日 のグリッドを描画（軸転置後の向き・設計書2.2）
+function drawGrid({ days, periods, cellMap }) {
+  const highlight = document.getElementById('highlight').checked;
+  const table = document.createElement('table');
+  table.className = 'timetable';
+  const head = table.insertRow();
+  head.innerHTML = `<th class="corner">時間割</th>` +
+    days.map((d) => `<th>${DAY_NAMES[d]}</th>`).join('');
+  for (const p of periods) {
+    const row = table.insertRow();
+    row.innerHTML = `<th class="period">${p}限</th>`;
+    for (const d of days) {
+      const td = row.insertCell();
+      const cell = cellMap.get(`${d}-${p}`);
+      if (!cell || cell.count === 0) {
+        td.className = 'free' + (highlight ? ' hl' : '');
+        continue;
+      }
+      if (cell.entries) { // 詳細表示
+        td.innerHTML = cell.entries.map((e) =>
+          `${badge(e.grade)}<span class="badge-detail">${e.name}${e.subject_name ? '「' + e.subject_name + '」' : ''}</span>`
+        ).join('');
+      } else {
+        td.innerHTML = sortGrades(cell.grades).map(badge).join('');
+      }
+    }
+  }
+  const grid = document.getElementById('grid');
+  grid.replaceChildren(table);
+}
+
+async function refresh() {
+  const q = tabs.selected;
+  const spot = document.getElementById('spot').value;
+  const title = document.getElementById('view-title');
+
+  if (spot) { // スポット表示: 個人の時間割（設計書7.2.1(d)）
+    const data = await api(`/api/users/${spot}/schedule?quarter=${q.id}`);
+    title.textContent = `${data.quarter.label} ｜ ${data.user.name}（${data.user.grade_label}）の時間割`;
+    const cellMap = new Map(data.entries.map((e) => [`${e.day}-${e.period}`, {
+      count: 1,
+      entries: [{ name: data.user.name, grade: data.user.grade_label, subject_name: e.subject_name }],
+    }]));
+    drawGrid({ days: data.days, periods: data.periods, cellMap });
+    return;
+  }
+
+  const mode = document.getElementById('mode').value;
+  const grades = selectedGrades().join(',');
+  const data = await api(`/api/overview?quarter=${q.id}&mode=${mode}&grades=${grades}`);
+  title.textContent = `${data.quarter.label} ｜ 全体図`;
+  drawGrid({ days: data.days, periods: data.periods, cellMap: new Map(data.cells.map((c) => [`${c.day}-${c.period}`, c])) });
+}
+
+(async () => {
+  const user = await renderChrome('home');
+  document.getElementById('go-edit').addEventListener('click', () => {
+    location.href = user ? '/edit.html' : '/login.html';
+  });
+
+  const controls = document.getElementById('controls');
+  tabs = await renderQuarterTabs(controls, refresh);
+  controls.prepend(controls.querySelector('.qtabs')); // タブを先頭へ移動
+
+  const { users } = await api('/api/users');
+  const spot = document.getElementById('spot');
+  for (const u of users) {
+    const o = document.createElement('option');
+    o.value = u.id;
+    o.textContent = `${u.name}（${u.grade_label}）`;
+    spot.appendChild(o);
+  }
+
+  document.querySelectorAll('#controls select, #controls input').forEach((el) =>
+    el.addEventListener('change', refresh));
+  await refresh();
+})();
+</script>
+</body>
+</html>

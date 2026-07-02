@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ログイン｜受講科目登録・閲覧システム</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="page">
+  <!-- ログインフォーム -->
+  <div class="card narrow" id="login-card">
+    <h2>ログイン</h2>
+    <p style="font-size:13px">時間割の登録・編集にはログインが必要です。<br>
+      <strong>初めての方は学番だけ</strong>入力してください（パスワードはログイン後に設定します）。</p>
+    <div class="field">
+      <label for="snum">学番</label>
+      <input id="snum" type="text" autocomplete="username" placeholder="例: B3001">
+    </div>
+    <div class="field">
+      <label for="pw">パスワード（初回は空欄のまま）</label>
+      <input id="pw" type="password" autocomplete="current-password">
+    </div>
+    <p class="error-msg" id="login-err"></p>
+    <button class="btn btn-primary" id="login-btn" style="width:100%">ログイン</button>
+    <p style="text-align:center;margin-top:14px">
+      <a href="#" id="forgot-link" class="link-plain">パスワードを忘れた場合（リセット）</a>
+    </p>
+  </div>
+
+  <!-- 初回パスワード設定（password_set:false のとき表示） -->
+  <div class="card narrow" id="setpw-card" style="display:none">
+    <h2>パスワード設定</h2>
+    <p style="font-size:13px"><span id="setpw-name"></span> さん、初回ログインありがとうございます。<br>
+      次回からのログインに使う<strong>パスワードを設定してください</strong>（6文字以上）。</p>
+    <div class="field">
+      <label for="npw">新しいパスワード</label>
+      <input id="npw" type="password" autocomplete="new-password">
+    </div>
+    <div class="field">
+      <label for="npw2">確認のためもう一度</label>
+      <input id="npw2" type="password" autocomplete="new-password">
+    </div>
+    <p class="error-msg" id="setpw-err"></p>
+    <button class="btn btn-primary" id="setpw-btn" style="width:100%">設定して時間割編集へ</button>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+<script>
+(async () => {
+  const user = await renderChrome(null);
+  // すでにログイン済みで、パスワード設定も済んでいれば編集画面へ直行
+  if (user && window.passwordSet) { location.href = '/edit.html'; return; }
+  if (user && !window.passwordSet) showSetPw(user.name);
+
+  document.getElementById('login-btn').addEventListener('click', doLogin);
+  document.getElementById('pw').addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
+  document.getElementById('snum').addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
+  document.getElementById('setpw-btn').addEventListener('click', doSetPw);
+  document.getElementById('forgot-link').addEventListener('click', doForgot);
+  initPwEyes();
+})();
+
+async function doForgot(e) {
+  e.preventDefault();
+  const err = document.getElementById('login-err');
+  err.textContent = '';
+  const sn = document.getElementById('snum').value.trim() ||
+    prompt('パスワードをリセットする学番を入力してください:');
+  if (!sn) return;
+  if (!confirm(`学番 ${sn} のパスワードをリセットします。\nリセット後は学番のみでログインし、パスワードを設定し直してください。よろしいですか？`)) return;
+  try {
+    await api('/api/auth/forgot-password', { method: 'POST', body: { student_number: sn } });
+    document.getElementById('snum').value = sn;
+    document.getElementById('pw').value = '';
+    err.textContent = '';
+    alert('リセットしました。パスワード欄は空欄のまま、学番だけでログインしてください。');
+  } catch (ex) {
+    err.textContent = ex.message;
+  }
+}
+
+function showSetPw(name) {
+  document.getElementById('login-card').style.display = 'none';
+  document.getElementById('setpw-card').style.display = '';
+  document.getElementById('setpw-name').textContent = name;
+}
+
+async function doLogin() {
+  const err = document.getElementById('login-err');
+  err.textContent = '';
+  try {
+    const res = await api('/api/auth/login', {
+      method: 'POST',
+      body: {
+        student_number: document.getElementById('snum').value.trim(),
+        password: document.getElementById('pw').value,
+      },
+    });
+    if (res.password_set) location.href = '/edit.html';
+    else showSetPw(res.user.name); // 初回: パスワード設定へ
+  } catch (e) {
+    err.textContent = e.message;
+  }
+}
+
+async function doSetPw() {
+  const err = document.getElementById('setpw-err');
+  err.textContent = '';
+  const p1 = document.getElementById('npw').value;
+  const p2 = document.getElementById('npw2').value;
+  if (p1 !== p2) { err.textContent = '2つのパスワードが一致しません'; return; }
+  try {
+    await api('/api/auth/set-password', { method: 'POST', body: { password: p1 } });
+    location.href = '/edit.html';
+  } catch (e) {
+    err.textContent = e.message;
+  }
+}
+</script>
+</body>
+</html>

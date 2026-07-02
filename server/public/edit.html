@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>時間割登録・編集｜受講科目登録・閲覧システム</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="page">
+  <div class="controls" id="controls">
+    <div class="panel" style="font-weight:bold" id="who"></div>
+    <span class="panel" style="font-size:12px;color:#a97b3a">
+      空きコマをクリック → 登録（科目名は任意）／ 登録済みコマをクリック → 科目名の編集・削除
+    </span>
+  </div>
+  <h2 id="view-title" style="margin:14px 20px 0;font-size:16px;color:#a9743a"></h2>
+  <div class="grid-wrap"><div id="grid"></div></div>
+</div>
+
+<script src="/app.js"></script>
+<script>
+let tabs, me;
+
+async function refresh() {
+  const q = tabs.selected;
+  const data = await api(`/api/users/${me.id}/schedule?quarter=${q.id}`);
+  document.getElementById('view-title').textContent = `${data.quarter.label} ｜ 自分の時間割`;
+  const entryMap = new Map(data.entries.map((e) => [`${e.day}-${e.period}`, e]));
+
+  const table = document.createElement('table');
+  table.className = 'timetable';
+  const head = table.insertRow();
+  head.innerHTML = `<th class="corner">✎ 編集</th>` +
+    data.days.map((d) => `<th>${DAY_NAMES[d]}</th>`).join('');
+  for (const p of data.periods) {
+    const row = table.insertRow();
+    row.innerHTML = `<th class="period">${p}限</th>`;
+    for (const d of data.days) {
+      const td = row.insertCell();
+      td.className = 'clickable';
+      const entry = entryMap.get(`${d}-${p}`);
+      if (entry) {
+        td.classList.add('mine');
+        td.innerHTML = badge(me.grade_label) +
+          (entry.subject_name ? `<span class="subject-label">${entry.subject_name}</span>` : '');
+        td.addEventListener('click', () => editCell(d, p, entry));
+      } else {
+        td.addEventListener('click', () => addCell(d, p));
+      }
+    }
+  }
+  document.getElementById('grid').replaceChildren(table);
+}
+
+async function addCell(day, period) {
+  const subject = prompt(`${DAY_NAMES[day]}曜${period}限に登録します。\n科目名（空欄でもOK）:`);
+  if (subject === null) return; // キャンセル
+  await api(`/api/users/${me.id}/schedule/cell?quarter=${tabs.selected.id}`, {
+    method: 'POST',
+    body: { day, period, subject_name: subject.trim() || null },
+  });
+  refresh();
+}
+
+async function editCell(day, period, entry) {
+  const input = prompt(
+    `${DAY_NAMES[day]}曜${period}限「${entry.subject_name ?? '(科目名なし)'}」\n` +
+    `科目名を変更するか、「削除」と入力するとコマを削除します:`,
+    entry.subject_name ?? ''
+  );
+  if (input === null) return;
+  if (input.trim() === '削除') {
+    await api(`/api/users/${me.id}/schedule/cell?quarter=${tabs.selected.id}&day=${day}&period=${period}`, { method: 'DELETE' });
+  } else {
+    await api(`/api/users/${me.id}/schedule/cell?quarter=${tabs.selected.id}`, {
+      method: 'POST',
+      body: { day, period, subject_name: input.trim() || null },
+    });
+  }
+  refresh();
+}
+
+(async () => {
+  const user = await renderChrome('edit');
+  if (!user) { location.href = '/login.html'; return; }
+  if (!window.passwordSet) { location.href = '/login.html'; return; } // 初回設定が未完了
+  me = user;
+  document.getElementById('who').textContent = `${me.name}（${me.grade_label}）`;
+  const controls = document.getElementById('controls');
+  tabs = await renderQuarterTabs(controls, refresh);
+  controls.prepend(controls.querySelector('.qtabs'));
+  await refresh();
+})();
+</script>
+</body>
+</html>

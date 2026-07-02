@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>プロフィール｜受講科目登録・閲覧システム</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="page">
+  <!-- 基本情報 -->
+  <div class="card narrow" style="margin-top:24px">
+    <h2>プロフィール</h2>
+    <p style="font-size:13px">自分の情報を確認・変更できます。</p>
+    <div class="field">
+      <label for="p-snum">学番（ログインIDになります）</label>
+      <input id="p-snum" type="text">
+    </div>
+    <div class="field">
+      <label for="p-name">氏名</label>
+      <input id="p-name" type="text">
+    </div>
+    <div class="field" id="grade-field">
+      <label for="p-grade">学年</label>
+      <select id="p-grade">
+        <option>B3</option><option>B4</option><option>M1</option><option>M2</option>
+      </select>
+    </div>
+    <p class="error-msg" id="p-err"></p>
+    <p class="ok-msg" id="p-ok"></p>
+    <button class="btn btn-primary" id="p-save" style="width:100%">基本情報を保存</button>
+  </div>
+
+  <!-- パスワード変更 -->
+  <div class="card narrow" style="margin-top:0">
+    <h2>パスワード変更</h2>
+    <div class="field">
+      <label for="cur-pw">現在のパスワード</label>
+      <input id="cur-pw" type="password" autocomplete="current-password">
+    </div>
+    <div class="field">
+      <label for="new-pw">新しいパスワード（6文字以上）</label>
+      <input id="new-pw" type="password" autocomplete="new-password">
+    </div>
+    <div class="field">
+      <label for="new-pw2">確認のためもう一度</label>
+      <input id="new-pw2" type="password" autocomplete="new-password">
+    </div>
+    <p class="error-msg" id="pw-err"></p>
+    <p class="ok-msg" id="pw-ok"></p>
+    <button class="btn btn-primary" id="pw-save" style="width:100%">パスワードを変更</button>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+<script>
+let me;
+
+(async () => {
+  me = await renderChrome(null);
+  if (!me) { location.href = '/login.html'; return; }
+
+  document.getElementById('p-snum').value = me.student_number;
+  document.getElementById('p-name').value = me.name;
+  if (me.role === 'teacher') {
+    document.getElementById('grade-field').style.display = 'none';
+  } else {
+    document.getElementById('p-grade').value = me.grade;
+  }
+
+  document.getElementById('p-save').addEventListener('click', saveProfile);
+  document.getElementById('pw-save').addEventListener('click', savePassword);
+  initPwEyes();
+})();
+
+async function saveProfile() {
+  const err = document.getElementById('p-err');
+  const ok = document.getElementById('p-ok');
+  err.textContent = ''; ok.textContent = '';
+  try {
+    const body = {
+      student_number: document.getElementById('p-snum').value.trim(),
+      name: document.getElementById('p-name').value.trim(),
+    };
+    if (me.role !== 'teacher') body.grade = document.getElementById('p-grade').value;
+    if (!body.student_number || !body.name) { err.textContent = '学番と氏名は必須です'; return; }
+    const res = await api(`/api/users/${me.id}`, { method: 'PATCH', body });
+    me = { ...me, ...res.user };
+    ok.textContent = '保存しました';
+  } catch (e) { err.textContent = e.message; }
+}
+
+async function savePassword() {
+  const err = document.getElementById('pw-err');
+  const ok = document.getElementById('pw-ok');
+  err.textContent = ''; ok.textContent = '';
+  const p1 = document.getElementById('new-pw').value;
+  const p2 = document.getElementById('new-pw2').value;
+  if (p1 !== p2) { err.textContent = '新しいパスワードが一致しません'; return; }
+  try {
+    await api('/api/auth/set-password', {
+      method: 'POST',
+      body: { password: p1, current_password: document.getElementById('cur-pw').value },
+    });
+    ok.textContent = '変更しました';
+    for (const id of ['cur-pw', 'new-pw', 'new-pw2']) document.getElementById(id).value = '';
+  } catch (e) { err.textContent = e.message; }
+}
+</script>
+</body>
+</html>

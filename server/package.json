@@ -1,0 +1,13 @@
+{
+  "name": "olab-schedule-server",
+  "version": "0.1.0",
+  "description": "研究室 受講科目登録・閲覧システム APIサーバ（依存パッケージなし / Node.js標準機能のみ）",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "seed": "node seed.js"
+  },
+  "engines": {
+    "node": ">=22.5"
+  }
+}
