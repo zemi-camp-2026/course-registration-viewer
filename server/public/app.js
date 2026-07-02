@@ -21,7 +21,8 @@ const FLASK_SVG = `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org
   <path d="M21 40h22" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
   <circle cx="28" cy="48" r="2.4" fill="#fff"/><circle cx="37" cy="50" r="1.8" fill="#fff"/>
 </svg>`;
-const SQUIGGLE_SVG = (color) => `<svg viewBox="0 0 200 30" xmlns="http://www.w3.org/2000/svg">
+const SQUIGGLE_SVG = (color) => `<svg viewBox="0 0 200 30" preserveAspectRatio="xMidYMid meet"
+  style="width:100%;height:100%;display:block" xmlns="http://www.w3.org/2000/svg">
   <path d="M4 20 q 12 -14 24 0 t 24 0 t 24 0 t 24 0 t 24 0 t 24 0 t 24 0"
     stroke="${color}" stroke-width="3" fill="none" stroke-linecap="round"/>
   <circle cx="185" cy="8" r="2.5" fill="${color}"/><circle cx="193" cy="16" r="2" fill="${color}"/>

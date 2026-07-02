@@ -37,7 +37,15 @@ body {
 .site-header .logo { width: 36px; height: 36px; flex: none; }
 .site-header .logo img, .site-header .logo svg { width: 100%; height: 100%; display: block; }
 .site-header h1 { font-size: 22px; margin: 0; letter-spacing: 1px; }
-.site-header .squiggle { flex: 1; height: 40px; opacity: .9; background: center / contain no-repeat; }
+.site-header .squiggle {
+  flex: 1;
+  height: 40px;
+  min-width: 0;
+  overflow: hidden;
+  opacity: .9;
+  background: center / contain no-repeat;
+  pointer-events: none; /* 装飾がクリック判定を奪わないように */
+}
 .site-header nav { display: flex; align-items: center; gap: 16px; font-size: 14px; white-space: nowrap; }
 .site-header nav a { color: #fff; text-decoration: none; }
 .site-header nav a:hover { text-decoration: underline; }
@@ -116,6 +124,7 @@ table.timetable {
   border-spacing: 5px;
   width: 100%;
   min-width: 760px;
+  table-layout: fixed; /* 空きの多い曜日（土曜など）の列が潰れないよう等幅にする */
 }
 table.timetable th {
   background: linear-gradient(180deg, var(--day-head) 0%, var(--day-head-deep) 100%);
@@ -125,7 +134,7 @@ table.timetable th {
   padding: 10px 6px;
   text-shadow: 0 1px 2px rgba(160, 100, 0, .35);
 }
-table.timetable th.corner { background: linear-gradient(180deg, var(--header) 0%, var(--header-deep) 100%); font-size: 14px; }
+table.timetable th.corner { background: linear-gradient(180deg, var(--header) 0%, var(--header-deep) 100%); font-size: 14px; width: 74px; }
 table.timetable th.period { width: 74px; font-size: 15px; }
 table.timetable td {
   background: var(--cell);
@@ -231,7 +240,13 @@ table.list th { color: #a97b3a; font-size: 12px; }
   color: #b98a4d;
   font-size: 12px;
 }
-.site-footer .squiggle { width: 180px; height: 36px; background: center / contain no-repeat; }
+.site-footer .squiggle {
+  width: 180px;
+  height: 36px;
+  overflow: hidden;
+  background: center / contain no-repeat;
+  pointer-events: none;
+}
 .site-footer .squiggle.flip { transform: scaleX(-1); }
 
 @media (max-width: 640px) {
