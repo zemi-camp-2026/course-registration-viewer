@@ -43,7 +43,7 @@ async function refresh() {
       if (entry) {
         td.classList.add('mine');
         td.innerHTML = badge(me.grade_label) +
-          (entry.subject_name ? `<span class="subject-label">${entry.subject_name}</span>` : '');
+          (entry.subject_name ? `<span class="subject-label">${esc(entry.subject_name)}</span>` : '');
         td.addEventListener('click', () => editCell(d, p, entry));
       } else {
         td.addEventListener('click', () => addCell(d, p));

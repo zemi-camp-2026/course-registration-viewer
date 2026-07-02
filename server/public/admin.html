@@ -77,8 +77,8 @@ async function loadMembers() {
   for (const u of users) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${u.student_number}</td>
-      <td>${u.name}</td>
+      <td>${esc(u.student_number)}</td>
+      <td>${esc(u.name)}</td>
       <td>${badge(u.grade_label)}</td>
       <td><button class="btn btn-danger btn-sm" data-act="del" ${u.id === me.id ? 'disabled' : ''}>削除</button></td>`;
     tr.querySelector('[data-act="del"]').addEventListener('click', async () => {
@@ -128,11 +128,11 @@ async function loadRollover() {
     tr.dataset.userId = u.id;
     tr.dataset.grade = u.grade;
     tr.innerHTML = `
-      <td>${u.student_number}</td>
-      <td>${u.name}</td>
+      <td>${esc(u.student_number)}</td>
+      <td>${esc(u.name)}</td>
       <td>${badge(u.grade_label)}</td>
       <td><select class="ro-plan">
-        <option value="keep">そのまま（${u.grade}）</option>
+        <option value="keep">そのまま（${esc(u.grade)}）</option>
         ${['B4', 'M1', 'M2'].map((g) => `<option value="${g}" ${g === suggested ? 'selected' : ''}>進級 → ${g}</option>`).join('')}
         <option value="delete" ${suggested === null ? 'selected' : ''}>卒業（削除）</option>
       </select></td>`;

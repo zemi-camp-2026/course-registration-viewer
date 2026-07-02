@@ -63,7 +63,7 @@ function drawGrid({ days, periods, cellMap }) {
       }
       if (cell.entries) { // 詳細表示
         td.innerHTML = cell.entries.map((e) =>
-          `${badge(e.grade)}<span class="badge-detail">${e.name}${e.subject_name ? '「' + e.subject_name + '」' : ''}</span>`
+          `${badge(e.grade)}<span class="badge-detail">${esc(e.name)}${e.subject_name ? '「' + esc(e.subject_name) + '」' : ''}</span>`
         ).join('');
       } else {
         td.innerHTML = sortGrades(cell.grades).map(badge).join('');

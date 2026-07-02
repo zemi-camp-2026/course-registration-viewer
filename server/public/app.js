@@ -67,7 +67,7 @@ async function renderChrome(active) {
     if (me.user) {
       if (me.user.is_admin) nav.insertAdjacentHTML('beforeend', ` <a href="/admin.html">管理</a>`);
       nav.insertAdjacentHTML('beforeend',
-        ` <a href="/profile.html" title="プロフィール">👤 ${me.user.name}</a> <a href="#" id="nav-logout">ログアウト</a>`);
+        ` <a href="/profile.html" title="プロフィール">👤 ${esc(me.user.name)}</a> <a href="#" id="nav-logout">ログアウト</a>`);
       nav.querySelector('#nav-logout').addEventListener('click', async (e) => {
         e.preventDefault();
         await api('/api/auth/logout', { method: 'POST' });
@@ -80,8 +80,15 @@ async function renderChrome(active) {
   return window.currentUser ?? null;
 }
 
+// ユーザー入力をHTMLに埋め込む前のエスケープ（XSS対策）。innerHTMLに入れる値は必ず通すこと
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 function badge(grade) {
-  return `<span class="badge ${grade}">${grade === 'Prof' ? 'Prof' : grade}</span>`;
+  const g = esc(grade);
+  return `<span class="badge ${g}">${g}</span>`;
 }
 
 function sortGrades(grades) {

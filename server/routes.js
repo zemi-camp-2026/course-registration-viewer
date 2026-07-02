@@ -60,6 +60,15 @@ function requireAdmin(req) {
   return user;
 }
 
+// 学年は許可値のみ受け付ける（表示崩れとXSSの侵入経路を断つ）
+const VALID_GRADES = ['B3', 'B4', 'M1', 'M2'];
+function validateGrade(grade) {
+  if (!VALID_GRADES.includes(grade)) {
+    throw new HttpError(400, `学年は ${VALID_GRADES.join('/')} のいずれかで指定してください`);
+  }
+  return grade;
+}
+
 function validateCell(day, period) {
   if (!DAYS.includes(Number(day)) || !PERIODS.includes(Number(period))) {
     throw new HttpError(400, `day は 1〜${DAYS.length}(月〜土)、period は 1〜${PERIODS.length} で指定してください`);
@@ -134,7 +143,7 @@ export const routes = [
       const { student_number, name, grade, role, password } = body ?? {};
       if (!student_number || !name) throw new HttpError(400, '学番と氏名は必須です');
       const userRole = role === 'teacher' ? 'teacher' : 'student';
-      if (userRole === 'student' && !grade) throw new HttpError(400, '学生は学年（B3/B4/M1/M2 など）を選択してください');
+      if (userRole === 'student') validateGrade(grade);
       if (typeof password !== 'string' || password.length < 6) {
         throw new HttpError(400, 'パスワードは6文字以上で指定してください');
       }
@@ -144,7 +153,7 @@ export const routes = [
           studentNumber: String(student_number),
           name: String(name),
           role: userRole,
-          grade: userRole === 'teacher' ? null : String(grade),
+          grade: userRole === 'teacher' ? null : grade,
           password,
         });
       } catch (err) {
@@ -259,12 +268,12 @@ export const routes = [
       const { student_number, name, grade, role } = body ?? {};
       if (!student_number || !name) throw new HttpError(400, 'student_number と name は必須です');
       const userRole = role === 'teacher' ? 'teacher' : 'student';
-      if (userRole === 'student' && !grade) throw new HttpError(400, '学生には grade (B3/B4/M1/M2 など) が必須です');
+      if (userRole === 'student') validateGrade(grade);
       let info;
       try {
         info = db
           .prepare('INSERT INTO users (student_number, name, role, grade) VALUES (?, ?, ?, ?)')
-          .run(String(student_number), String(name), userRole, userRole === 'teacher' ? null : String(grade));
+          .run(String(student_number), String(name), userRole, userRole === 'teacher' ? null : grade);
       } catch (err) {
         if (String(err.message).includes('UNIQUE')) throw new HttpError(409, `学番 ${student_number} は登録済みです`);
         throw err;
@@ -286,7 +295,9 @@ export const routes = [
         throw new HttpError(403, 'この項目は管理者のみ変更できます');
       }
       const name = body?.name ?? u.name;
-      const grade = body?.grade !== undefined ? body.grade : u.grade;
+      // 学年の変更は学生のみ・許可値のみ（教員は null のまま）
+      let grade = u.grade;
+      if (body?.grade !== undefined && u.role === 'student') grade = validateGrade(body.grade);
       const studentNumber = body?.student_number ?? u.student_number;
       const isActive = body?.is_active !== undefined ? (body.is_active ? 1 : 0) : u.is_active;
       const isAdmin = body?.is_admin !== undefined ? (body.is_admin ? 1 : 0) : u.is_admin;
@@ -340,7 +351,8 @@ export const routes = [
         let promoted = 0;
         for (const p of promotions) {
           if (!p?.user_id || !p?.new_grade) throw new HttpError(400, 'promotions は {user_id, new_grade} の配列で指定してください');
-          promoted += promoteStmt.run(String(p.new_grade), Number(p.user_id)).changes;
+          validateGrade(p.new_grade);
+          promoted += promoteStmt.run(p.new_grade, Number(p.user_id)).changes;
         }
 
         // 3. 新入生の追加（パスワード未設定で作成 = 初回は学番のみでログイン可能）

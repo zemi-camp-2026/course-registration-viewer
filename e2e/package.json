@@ -1,0 +1,12 @@
+{
+  "name": "olab-e2e",
+  "private": true,
+  "description": "受講科目登録・閲覧システムのE2Eテスト（本体は依存ゼロ方針のため、テスト用依存はこのフォルダに隔離）",
+  "type": "module",
+  "scripts": {
+    "test": "node run.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.61.0"
+  }
+}
