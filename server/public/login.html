@@ -24,7 +24,42 @@
     <p class="error-msg" id="login-err"></p>
     <button class="btn btn-primary" id="login-btn" style="width:100%">ログイン</button>
     <p style="text-align:center;margin-top:14px">
-      <a href="#" id="forgot-link" class="link-plain">パスワードを忘れた場合（リセット）</a>
+      <a href="#" id="show-register" class="link-plain">はじめての方: 新規登録</a>　｜
+      <a href="#" id="forgot-link" class="link-plain">パスワードを忘れた場合</a>
+    </p>
+  </div>
+
+  <!-- 新規登録（セルフサインアップ） -->
+  <div class="card narrow" id="register-card" style="display:none">
+    <h2>新規登録</h2>
+    <p style="font-size:13px">研究室メンバーなら誰でも自分でアカウントを作れます。</p>
+    <div class="field">
+      <label for="r-snum">学番</label>
+      <input id="r-snum" type="text" placeholder="例: B3001">
+    </div>
+    <div class="field">
+      <label for="r-name">氏名</label>
+      <input id="r-name" type="text" placeholder="例: 山田 太郎">
+    </div>
+    <div class="field">
+      <label for="r-grade">学年</label>
+      <select id="r-grade">
+        <option>B3</option><option>B4</option><option>M1</option><option>M2</option>
+        <option value="teacher">教員</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="r-pw">パスワード（6文字以上）</label>
+      <input id="r-pw" type="password" autocomplete="new-password">
+    </div>
+    <div class="field">
+      <label for="r-pw2">確認のためもう一度</label>
+      <input id="r-pw2" type="password" autocomplete="new-password">
+    </div>
+    <p class="error-msg" id="register-err"></p>
+    <button class="btn btn-primary" id="register-btn" style="width:100%">登録して始める</button>
+    <p style="text-align:center;margin-top:14px">
+      <a href="#" id="show-login" class="link-plain">アカウントがある方: ログインへ戻る</a>
     </p>
   </div>
 
@@ -59,8 +94,40 @@
   document.getElementById('snum').addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
   document.getElementById('setpw-btn').addEventListener('click', doSetPw);
   document.getElementById('forgot-link').addEventListener('click', doForgot);
+  document.getElementById('register-btn').addEventListener('click', doRegister);
+  document.getElementById('show-register').addEventListener('click', (e) => { e.preventDefault(); toggleCards('register'); });
+  document.getElementById('show-login').addEventListener('click', (e) => { e.preventDefault(); toggleCards('login'); });
   initPwEyes();
 })();
+
+function toggleCards(which) {
+  document.getElementById('login-card').style.display = which === 'login' ? '' : 'none';
+  document.getElementById('register-card').style.display = which === 'register' ? '' : 'none';
+}
+
+async function doRegister() {
+  const err = document.getElementById('register-err');
+  err.textContent = '';
+  const p1 = document.getElementById('r-pw').value;
+  const p2 = document.getElementById('r-pw2').value;
+  if (p1 !== p2) { err.textContent = '2つのパスワードが一致しません'; return; }
+  const gradeSel = document.getElementById('r-grade').value;
+  try {
+    await api('/api/auth/register', {
+      method: 'POST',
+      body: {
+        student_number: document.getElementById('r-snum').value.trim(),
+        name: document.getElementById('r-name').value.trim(),
+        role: gradeSel === 'teacher' ? 'teacher' : 'student',
+        grade: gradeSel === 'teacher' ? null : gradeSel,
+        password: p1,
+      },
+    });
+    location.href = '/edit.html';
+  } catch (e) {
+    err.textContent = e.message;
+  }
+}
 
 async function doForgot(e) {
   e.preventDefault();

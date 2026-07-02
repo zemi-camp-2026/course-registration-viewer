@@ -9,6 +9,7 @@
 // 未登録の学番ではログインできない。
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { db } from './db.js';
+import { ADMIN_STUDENT_NUMBERS } from './config.js';
 
 // stub = 開発用（パスワードを一切見ない）。既定は本番方式 'password'。
 const AUTH_PROVIDER = process.env.OLAB_AUTH ?? 'password';
@@ -74,13 +75,44 @@ const providers = {
 
 // ---- 公開API（本体ロジックはここだけを使う）--------------------------------
 
+// config.js の管理者リストと is_admin フラグを同期する（ログイン・登録のたびに反映）
+function syncAdminFlag(user) {
+  const shouldBeAdmin = ADMIN_STUDENT_NUMBERS.includes(user.student_number) ? 1 : 0;
+  if (user.is_admin !== shouldBeAdmin) {
+    db.prepare("UPDATE users SET is_admin = ?, updated_at = datetime('now') WHERE id = ?")
+      .run(shouldBeAdmin, user.id);
+    user.is_admin = shouldBeAdmin;
+  }
+  return user;
+}
+
+// セッションを発行して Cookie 用トークンを返す
+export function createSession(user) {
+  const token = randomBytes(32).toString('hex');
+  sessions.set(token, { userId: user.id, expiresAt: Date.now() + SESSION_TTL_MS });
+  return token;
+}
+
 // ログイン: 成功したら { user, token } を返す。失敗は null。
 export function login(studentNumber, password) {
   const user = providers[AUTH_PROVIDER].authenticate(studentNumber, password);
   if (!user) return null;
-  const token = randomBytes(32).toString('hex');
-  sessions.set(token, { userId: user.id, expiresAt: Date.now() + SESSION_TTL_MS });
-  return { user, token };
+  syncAdminFlag(user);
+  return { user, token: createSession(user) };
+}
+
+// 新規登録（セルフサインアップ）: ユーザー作成＋パスワード設定＋ログインまで行う。
+// 学番が config.js の管理者リストにあれば管理者権限を自動付与。
+export function register({ studentNumber, name, role, grade, password }) {
+  const info = db.prepare(
+    'INSERT INTO users (student_number, name, role, grade, password_hash, is_admin) VALUES (?, ?, ?, ?, ?, ?)'
+  ).run(
+    studentNumber, name, role, grade,
+    hashPassword(password),
+    ADMIN_STUDENT_NUMBERS.includes(studentNumber) ? 1 : 0
+  );
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
+  return { user, token: createSession(user) };
 }
 
 // パスワード設定・変更（本人がログイン済みであることは呼び出し側で保証する）

@@ -99,5 +99,5 @@ const server = createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`受講科目登録・閲覧システム APIサーバ起動: http://localhost:${PORT}`);
-  console.log(`認証プロバイダ: ${process.env.OLAB_AUTH ?? 'stub'}（開発用仮ログイン）`);
+  console.log(`認証プロバイダ: ${process.env.OLAB_AUTH ?? 'password'}`);
 });

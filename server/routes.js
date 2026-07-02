@@ -2,7 +2,7 @@
 // 閲覧系: 認証不要 / 編集系: 認証必須かつ本人のみ（設計書4章・5章）
 import { db, DAYS, PERIODS, gradeLabel } from './db.js';
 import {
-  login, logout, getCurrentUser, setPassword, resetPassword, verifyPassword,
+  login, logout, register, getCurrentUser, setPassword, resetPassword, verifyPassword,
   sessionCookie, clearSessionCookie, AUTH_PROVIDER,
 } from './auth.js';
 
@@ -124,6 +124,40 @@ export const routes = [
       }
       setPassword(user.id, password);
       return { json: { ok: true, password_set: true } };
+    },
+  },
+  {
+    // 新規登録（セルフサインアップ / ログイン画面から誰でも作成できる）
+    // 学番が config.js の管理者リストにあれば管理者権限を自動付与
+    method: 'POST', path: '/api/auth/register',
+    handler(req, { body }) {
+      const { student_number, name, grade, role, password } = body ?? {};
+      if (!student_number || !name) throw new HttpError(400, '学番と氏名は必須です');
+      const userRole = role === 'teacher' ? 'teacher' : 'student';
+      if (userRole === 'student' && !grade) throw new HttpError(400, '学生は学年（B3/B4/M1/M2 など）を選択してください');
+      if (typeof password !== 'string' || password.length < 6) {
+        throw new HttpError(400, 'パスワードは6文字以上で指定してください');
+      }
+      let result;
+      try {
+        result = register({
+          studentNumber: String(student_number),
+          name: String(name),
+          role: userRole,
+          grade: userRole === 'teacher' ? null : String(grade),
+          password,
+        });
+      } catch (err) {
+        if (String(err.message).includes('UNIQUE')) {
+          throw new HttpError(409, `学番 ${student_number} は登録済みです。ログインしてください`);
+        }
+        throw err;
+      }
+      return {
+        status: 201,
+        headers: { 'Set-Cookie': sessionCookie(result.token) },
+        json: { user: publicUser(result.user), password_set: true, auth_provider: AUTH_PROVIDER },
+      };
     },
   },
   {

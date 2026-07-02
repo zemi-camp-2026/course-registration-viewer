@@ -16,13 +16,13 @@ node server.js      # サーバ起動（既定ポート3000。 PORT=3100 node se
 
 ## 認証（本番方式を実装済み・設計書4章）
 
-既存システム踏襲のフロー:
-1. 管理者がメンバー登録（パスワード未設定）
-2. 本人は**初回、学番のみでログイン可**（レスポンスに `password_set: false`）
-3. `POST /api/auth/set-password` で本人がパスワード設定（**scryptハッシュでDB保存**。平文保存はしない）
-4. 以降は学番＋パスワード必須。未登録の学番は常に拒否
-5. 忘れたら本人がログイン画面から `POST /api/auth/forgot-password` でセルフリセット（未設定状態に戻る）
-6. ログイン後はプロフィール画面（profile.html）で学番・氏名・学年・パスワードを本人が変更できる
+- **新規登録はセルフサインアップ**: ログイン画面から誰でも学番・氏名・学年・パスワードでアカウント作成（`POST /api/auth/register`）
+- **管理者権限は `config.js` の `ADMIN_STUDENT_NUMBERS`** にある学番へ登録時・ログイン時に自動付与
+- 管理者が画面からメンバー追加した場合はパスワード未設定で作られ、本人は**初回、学番のみでログイン可**（レスポンスに `password_set: false`）→ `POST /api/auth/set-password` で設定
+- パスワードは**scryptハッシュでDB保存**（平文保存はしない）。未登録の学番でのログインは常に拒否
+- 忘れたら本人がログイン画面から `POST /api/auth/forgot-password` でセルフリセット（未設定状態に戻る）
+- ログイン後はプロフィール画面（profile.html）で学番・氏名・学年・パスワードを本人が変更できる
+- **ブートストラップ**: 空のDBで起動すると現在年度の1Q〜4Qを自動作成（4月始まりの年度計算）
 
 シード済みの学番例: `B3001` `M1001` `T0001`(教員・管理者)。全員パスワード未設定＝初回ログイン状態から始まる。
 開発でパスワード検証を完全に切りたい場合のみ `OLAB_AUTH=stub node server.js`。
@@ -41,6 +41,6 @@ node server.js      # サーバ起動（既定ポート3000。 PORT=3100 node se
 ## 主要API（詳細は設計書8章）
 
 - 閲覧（ログイン不要）: `GET /api/overview?quarter=&mode=summary|detail&grades=` / `GET /api/quarters` / `GET /api/users` / `GET /api/users/:id/schedule?quarter=` / `GET /api/free?quarter=&users=1,2,3`
-- 認証: `POST /api/auth/login` / `POST /api/auth/set-password`（変更時は current_password 必須） / `POST /api/auth/forgot-password`（セルフリセット） / `POST /api/auth/logout` / `GET /api/auth/me`
+- 認証: `POST /api/auth/register`（新規登録） / `POST /api/auth/login` / `POST /api/auth/set-password`（変更時は current_password 必須） / `POST /api/auth/forgot-password`（セルフリセット） / `POST /api/auth/logout` / `GET /api/auth/me`
 - 編集（要ログイン・本人のみ）: `POST|DELETE /api/users/:id/schedule/cell?quarter=` / `PUT /api/users/:id/schedule?quarter=` / `PATCH /api/users/:id`（本人のプロフィール編集。管理者は全員分可）
 - 管理（要adminロール）: `POST|DELETE /api/users(/:id)`（削除は物理削除・コマもCASCADEで消える） / `POST /api/admin/year-rollover`（卒業生削除・進級・新入生追加・新年度クォーター作成を一括実行）

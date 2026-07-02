@@ -38,7 +38,8 @@
   <!-- タブ2: 年度更新ウィザード -->
   <div class="card" id="pane-rollover" style="margin-top:0;display:none">
     <h2>年度更新</h2>
-    <p style="font-size:13px">卒業するメンバーの削除・在校生の進級・新入生の追加をまとめて実行します。<br>
+    <p style="font-size:13px">卒業するメンバーの削除・在校生の進級・新年度クォーターの作成をまとめて実行します。<br>
+      新入生は各自がログイン画面から新規登録するため、ここでの追加は不要です。<br>
       <strong>削除された人の受講データは全学期分消え、元に戻せません。</strong>下の表をよく確認してから実行してください。</p>
     <div class="field" style="max-width:200px">
       <label>新年度（西暦）</label>
@@ -48,11 +49,6 @@
       <thead><tr><th>学番</th><th>氏名</th><th>現在</th><th>年度更新後</th></tr></thead>
       <tbody></tbody>
     </table>
-    <div class="field">
-      <label>新入生（1行に1人: 学番,氏名,学年）</label>
-      <textarea id="ro-new" rows="4" style="width:100%;border:1.5px solid #e9d3b3;border-radius:10px;font:inherit;padding:10px"
-        placeholder="B3011,新入 太郎,B3&#10;B3012,新入 花子,B3"></textarea>
-    </div>
     <p class="error-msg" id="ro-err"></p>
     <button class="btn btn-danger" id="ro-btn">年度更新を実行する</button>
   </div>
@@ -156,30 +152,19 @@ document.getElementById('ro-btn').addEventListener('click', async () => {
     if (plan === 'delete') deleteIds.push(id);
     else if (plan !== 'keep') promotions.push({ user_id: id, new_grade: plan });
   }
-  const newMembers = document.getElementById('ro-new').value.split('\n')
-    .map((l) => l.trim()).filter(Boolean)
-    .map((l) => {
-      const [student_number, name, grade] = l.split(',').map((s) => s?.trim());
-      return { student_number, name, grade };
-    });
-  if (newMembers.some((m) => !m.student_number || !m.name || !m.grade)) {
-    err.textContent = '新入生の行は「学番,氏名,学年」の形式で入力してください';
-    return;
-  }
   if (!confirm(
     `${newYear}年度への更新を実行します:\n` +
     `・削除（卒業）: ${deleteIds.length}人（受講データも全部消えます・取り消し不可）\n` +
     `・進級: ${promotions.length}人\n` +
-    `・新入生追加: ${newMembers.length}人\n` +
-    `・${newYear}年度の1Q〜4Qを作成し、1Qをアクティブにします\n\nよろしいですか？`
+    `・${newYear}年度の1Q〜4Qを作成し、1Qをアクティブにします\n` +
+    `（新入生は各自がログイン画面から新規登録します）\n\nよろしいですか？`
   )) return;
   try {
     const res = await api('/api/admin/year-rollover', {
       method: 'POST',
-      body: { new_year: newYear, delete_user_ids: deleteIds, promotions, new_members: newMembers },
+      body: { new_year: newYear, delete_user_ids: deleteIds, promotions },
     });
-    alert(`年度更新が完了しました。\n削除 ${res.deleted_users}人 / 進級 ${res.promoted_users}人 / 追加 ${res.added_users}人`);
-    document.getElementById('ro-new').value = '';
+    alert(`年度更新が完了しました。\n削除 ${res.deleted_users}人 / 進級 ${res.promoted_users}人`);
     loadMembers();
     loadRollover();
   } catch (e) { err.textContent = e.message; }

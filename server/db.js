@@ -56,6 +56,23 @@ db.exec(`
 export const DAYS = [1, 2, 3, 4, 5, 6];
 export const PERIODS = [1, 2, 3, 4, 5];
 
+// ブートストラップ: 学期が1つもなければ現在の年度の1Q〜4Qを自動作成する。
+// （空のDBから起動しても、新規登録→時間割登録がすぐできるように）
+{
+  const { n } = db.prepare('SELECT COUNT(*) AS n FROM quarters').get();
+  if (n === 0) {
+    const now = new Date();
+    const month = now.getMonth() + 1;
+    const fiscalYear = month >= 4 ? now.getFullYear() : now.getFullYear() - 1; // 年度は4月始まり
+    const currentQ = month >= 4 && month <= 6 ? 1 : month >= 7 && month <= 9 ? 2 : month >= 10 ? 3 : 4;
+    const labels = ['前期前半(1Q)', '前期後半(2Q)', '後期前半(3Q)', '後期後半(4Q)'];
+    const ins = db.prepare('INSERT INTO quarters (year, quarter, label, is_active) VALUES (?, ?, ?, ?)');
+    labels.forEach((label, i) =>
+      ins.run(fiscalYear, i + 1, `${fiscalYear}年度${label}`, i + 1 === currentQ ? 1 : 0));
+    console.log(`学期が未作成だったため ${fiscalYear}年度の1Q〜4Qを自動作成しました（${currentQ}Qをアクティブに設定）`);
+  }
+}
+
 // 学年ラベル: 教員は 'Prof' として扱う（既存システムの表示を踏襲）
 export function gradeLabel(user) {
   return user.role === 'teacher' ? 'Prof' : (user.grade ?? '?');
