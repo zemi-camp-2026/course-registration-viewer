@@ -7,8 +7,30 @@ import { extname, join, normalize } from 'node:path';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { routes, HttpError } from './routes.js';
+import { db } from './db.js';
+import { populateSampleData } from './seed.js';
 
 const PORT = Number(process.env.PORT ?? 3000);
+// 本番判定は OLAB_ENV / NODE_ENV のどちらかが production なら本番扱い（付け忘れの保険）
+const IS_PROD = process.env.OLAB_ENV === 'production' || process.env.NODE_ENV === 'production';
+
+// 開発モードで、まだユーザーが1人もいなければサンプルデータ（ユーザー・時間割）を自動投入する。
+// （cloneして起動しただけですぐ画面にデータが見えるように）
+// 本番（OLAB_ENV=production）ではサンプルのユーザー・時間割は入らない。
+// ※学期(quarters)は本番でも db.js のブートストラップで自動作成される（別経路）
+if (!IS_PROD) {
+  const { n } = db.prepare('SELECT COUNT(*) AS n FROM users').get();
+  if (n === 0) {
+    try {
+      const r = populateSampleData();
+      console.log(`開発モード: サンプルデータを自動投入しました（users=${r.users}, entries=${r.entries}）`);
+      console.log('ログイン用の学番例: B3001 / T0001(教員・管理者)。本番運用時は OLAB_ENV=production で起動してください');
+    } catch (err) {
+      // 投入失敗（ロック等）でもサーバ自体は起動させる。トランザクションでロールバック済み
+      console.error('サンプルデータの自動投入に失敗しました（サーバは起動します）:', err.message);
+    }
+  }
+}
 const PUBLIC_DIR = join(dirname(fileURLToPath(import.meta.url)), 'public');
 
 const MIME = {

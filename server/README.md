@@ -8,11 +8,14 @@
 
 ```bash
 cd server
-node seed.js        # サンプルデータ投入（初回や、データをリセットしたいとき）
-node server.js      # サーバ起動（既定ポート3000。 PORT=3100 node server.js で変更可）
+node server.js      # 既定ポート3000。 PORT=3100 node server.js で変更可
 ```
 
-ブラウザで `http://localhost:3000`（動作確認用の仮ページ）。
+- **開発モード（既定）**: 起動時にユーザーが0件ならサンプルデータを自動投入する。
+- **本番モード**: `OLAB_ENV=production node server.js` で起動するとサンプルは入らず空から始まる（`NODE_ENV=production` でも同様）。
+- サンプルを手動でリセットしたいとき: `node seed.js`（既存データを消して入れ直す）。
+
+ブラウザで `http://localhost:3000`。
 
 ## 認証（本番方式を実装済み・設計書4章）
 

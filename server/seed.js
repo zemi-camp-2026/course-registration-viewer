@@ -1,8 +1,25 @@
-// サンプルデータ投入スクリプト（動作確認用）
-// 実行: npm run seed   （既存データがあれば消してから入れ直す）
+// サンプルデータ投入（動作確認用）
+// - CLIから: node seed.js   （既存データを消して入れ直す）
+// - サーバ起動時に自動: 開発モードでユーザーが0件のとき server.js から populateSampleData() が呼ばれる
+import { pathToFileURL } from 'node:url';
 import { db, DAYS, PERIODS } from './db.js';
 
-db.exec('DELETE FROM schedule_entries; DELETE FROM quarters; DELETE FROM users;');
+// サンプルデータで初期化する（既存データは消してから入れ直す）。
+// DELETE→多数INSERT を1トランザクションにまとめ、途中失敗時は元に戻す（中途半端な状態を残さない）
+export function populateSampleData() {
+  db.exec('BEGIN');
+  try {
+    const result = buildSampleData();
+    db.exec('COMMIT');
+    return result;
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
+function buildSampleData() {
+  db.exec('DELETE FROM schedule_entries; DELETE FROM quarters; DELETE FROM users;');
 
 // ---- 学期: 2026年度 1Q〜4Q（1Q をアクティブに） ----
 const insQ = db.prepare('INSERT INTO quarters (year, quarter, label, is_active) VALUES (?, ?, ?, ?)');
@@ -71,7 +88,15 @@ for (const u of users) {
   }
 }
 
-const nUsers = db.prepare('SELECT COUNT(*) AS n FROM users').get().n;
-const nEntries = db.prepare('SELECT COUNT(*) AS n FROM schedule_entries').get().n;
-console.log(`投入完了: users=${nUsers}, quarters=4, schedule_entries=${nEntries}`);
-console.log('仮ログイン用の学番例: B3001 / M1001 / T0001(教員・管理者)');
+  const nUsers = db.prepare('SELECT COUNT(*) AS n FROM users').get().n;
+  const nEntries = db.prepare('SELECT COUNT(*) AS n FROM schedule_entries').get().n;
+  return { users: nUsers, entries: nEntries };
+}
+
+// CLIとして直接実行されたときだけ投入してログを出す（import時には実行しない）。
+// pathToFileURL でパスのスペース/Windows差異を吸収して比較する
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const r = populateSampleData();
+  console.log(`投入完了: users=${r.users}, quarters=4, schedule_entries=${r.entries}`);
+  console.log('仮ログイン用の学番例: B3001 / M1001 / T0001(教員・管理者)');
+}
