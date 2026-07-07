@@ -1,0 +1,49 @@
+- generic [active] [ref=f3e1]:
+  - banner [ref=f3e2]:
+    - img [ref=f3e4]
+    - heading "受講科目登録・閲覧システム" [level=1] [ref=f3e8]
+    - generic:
+      - img
+    - navigation [ref=f3e9]:
+      - link "ホーム" [ref=f3e10] [cursor=pointer]:
+        - /url: /
+  - generic [ref=f3e11]:
+    - generic [ref=f3e12]:
+      - heading "プロフィール" [level=2] [ref=f3e13]
+      - paragraph [ref=f3e14]: 自分の情報を確認・変更できます。
+      - generic [ref=f3e15]:
+        - generic [ref=f3e16]: 学番（ログインIDになります）
+        - textbox "学番（ログインIDになります）" [ref=f3e17]
+      - generic [ref=f3e18]:
+        - generic [ref=f3e19]: 氏名
+        - textbox "氏名" [ref=f3e20]
+      - generic [ref=f3e21]:
+        - generic [ref=f3e22]: 学年
+        - combobox "学年" [ref=f3e23]:
+          - option "B3" [selected]
+          - option "B4"
+          - option "M1"
+          - option "M2"
+      - paragraph [ref=f3e24]
+      - paragraph
+      - button "基本情報を保存" [ref=f3e25] [cursor=pointer]
+    - generic [ref=f3e26]:
+      - heading "パスワード変更" [level=2] [ref=f3e27]
+      - generic [ref=f3e28]:
+        - generic [ref=f3e29]: 現在のパスワード
+        - textbox "現在のパスワード" [ref=f3e30]
+      - generic [ref=f3e31]:
+        - generic [ref=f3e32]: 新しいパスワード（6文字以上）
+        - textbox "新しいパスワード（6文字以上）" [ref=f3e33]
+      - generic [ref=f3e34]:
+        - generic [ref=f3e35]: 確認のためもう一度
+        - textbox "確認のためもう一度" [ref=f3e36]
+      - paragraph [ref=f3e37]
+      - paragraph
+      - button "パスワードを変更" [ref=f3e38] [cursor=pointer]
+  - contentinfo [ref=f3e39]:
+    - generic:
+      - img
+    - generic [ref=f3e40]: © Olab
+    - generic:
+      - img

@@ -1,0 +1,45 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - img [ref=e4]
+    - heading "受講科目登録・閲覧システム" [level=1] [ref=e8]
+    - generic:
+      - img
+    - navigation [ref=e9]:
+      - link "ホーム" [ref=e10] [cursor=pointer]:
+        - /url: /
+  - generic [ref=e11]:
+    - generic [ref=e12]:
+      - generic [ref=e13]:
+        - generic [ref=e14] [cursor=pointer]:
+          - checkbox "B3" [checked] [ref=e15]
+          - text: B3
+        - generic [ref=e16] [cursor=pointer]:
+          - checkbox "B4" [checked] [ref=e17]
+          - text: B4
+        - generic [ref=e18] [cursor=pointer]:
+          - checkbox "M1" [checked] [ref=e19]
+          - text: M1
+        - generic [ref=e20] [cursor=pointer]:
+          - checkbox "M2" [checked] [ref=e21]
+          - text: M2
+        - generic [ref=e22] [cursor=pointer]:
+          - checkbox "教員" [checked] [ref=e23]
+          - text: 教員
+      - generic [ref=e25] [cursor=pointer]:
+        - checkbox "ハイライト" [ref=e26]
+        - text: ハイライト
+      - combobox [ref=e28]:
+        - option "サマリ" [selected]
+        - option "詳細"
+      - generic [ref=e29]:
+        - generic [ref=e30]: スポット表示
+        - combobox [ref=e31]:
+          - option "全体図" [selected]
+      - button "📅 時間割登録・編集" [ref=e32] [cursor=pointer]
+    - heading [level=2]
+  - contentinfo [ref=e34]:
+    - generic:
+      - img
+    - generic [ref=e35]: © Olab
+    - generic:
+      - img
