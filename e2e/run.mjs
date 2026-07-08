@@ -1,9 +1,9 @@
 // E2Eテスト: 実ブラウザ(Chromium headless)で主要フローを検証する
-// 前提: サーバが BASE (既定 http://localhost:3100) で起動していること
+// 前提: サーバが BASE (既定 http://localhost:3000) で起動していること
 // 実行: cd e2e && npm install && node run.mjs
 import { chromium } from 'playwright';
 
-const BASE = process.env.BASE ?? 'http://localhost:3100';
+const BASE = process.env.BASE ?? 'http://localhost:3000';
 const results = [];
 
 async function step(name, fn) {

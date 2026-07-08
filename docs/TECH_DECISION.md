@@ -11,7 +11,7 @@
 | バックエンド | PHP 8.2 | chobi.net が PHP をサポート。フレームワークなし（単一エントリポイント方式） |
 | データベース | MySQL 8.0 | chobi.net が MySQL をサポート。InnoDB + utf8mb4 |
 | フロントエンド | 素の HTML/CSS/JS | ビルドツール不要。`src/public/` をそのまま配信 |
-| 開発環境 | Docker Compose | PHP + MySQL をローカルで再現（ポート 3100） |
+| 開発環境 | Docker Compose | PHP + MySQL をローカルで再現（ポート 3000） |
 | E2Eテスト | Playwright（Node.js） | ヘッドレスブラウザで全画面フローを自動検証 |
 
 ## 主要な設計判断

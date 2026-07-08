@@ -14,7 +14,7 @@ cd course-registration-viewer
 docker compose up -d
 ```
 
-→ ブラウザで **http://localhost:3100** を開く。
+→ ブラウザで **http://localhost:3000** を開く。
 
 初回はDockerイメージのビルドとMySQLの起動に少し時間がかかる。`docker compose logs -f web` でログを確認できる。
 

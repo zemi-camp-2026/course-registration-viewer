@@ -8,7 +8,7 @@
   - `src/public/` — フロント5画面（素のHTML/CSS/JS）。テーマは設計書11.0（ウォームポップ）
   - `src/routes/` — APIルートハンドラ（PHP）
   - `src/index.php` — エントリポイント（ルーター）
-- Docker で開発: `docker compose up -d`（ポート 3100 で起動）
+- Docker で開発: `docker compose up -d`（ポート 3000 で起動）
 - サンプルデータ: `docker compose exec web php seed.php`（開発モードではユーザー0件時に自動投入）
 
 ## コード編集後の検証ルール（必須・修正点がなくなるまで反復）
@@ -18,7 +18,7 @@
 1. **コードレビュー**: `code-reviewer` サブエージェント（`.claude/agents/code-reviewer.md`）を起動して変更をレビューさせる
 2. **ブラウザでの動作検証**: 変更した画面・機能を実際に操作して確認する
    - Playwright MCP が接続されていればそのブラウザツールで操作する
-   - 未接続なら `cd e2e && node run.mjs` でE2Eテストを実行する（Docker が `localhost:3100` で起動している必要あり。初回だけ `npm install`）
+   - 未接続なら `cd e2e && node run.mjs` でE2Eテストを実行する（Docker が `localhost:3000` で起動している必要あり。初回だけ `npm install`）
    - どちらも不可能な場合のみ、curl でのAPI検証＋構文チェックで代替し、その旨を報告する
 3. **判定**: レビューの指摘（軽微を除く）または動作検証の失敗が1つでもあれば、**それらを修正して 1 に戻る**
 4. レビューが「指摘なし」かつ動作検証が全項目パスになったら、はじめてコミットする

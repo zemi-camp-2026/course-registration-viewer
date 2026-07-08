@@ -16,7 +16,7 @@ cd course-registration-viewer
 docker compose up -d
 
 # 3. ブラウザで確認
-# http://localhost:3100 にアクセス
+# http://localhost:3000 にアクセス
 ```
 
 初回起動時、開発モード（`OLAB_ENV=development`）ではユーザーが 0 件のときにサンプルデータが自動投入される。
@@ -25,7 +25,7 @@ docker compose up -d
 
 | サービス | イメージ | ポート | 説明 |
 |----------|----------|--------|------|
-| web | php:8.2-apache（カスタム） | 3100:80 | PHP + Apache。`src/` をマウント |
+| web | php:8.2-apache（カスタム） | 3000:80 | PHP + Apache。`src/` をマウント |
 | db | mysql:8.0 | 3306:3306 | MySQL。`init.sql` で初期化 |
 
 ## サンプルデータ
@@ -114,7 +114,7 @@ course-registration-viewer/
 
 ## トラブルシューティング
 
-### ポート 3100 が既に使われている
+### ポート 3000 が既に使われている
 `docker-compose.yml` の `ports` を変更する（例: `3200:80`）。E2Eテストには `BASE=http://localhost:3200 node run.mjs` で URL を渡す。
 
 ### DB接続エラー
