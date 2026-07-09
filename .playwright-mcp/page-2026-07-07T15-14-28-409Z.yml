@@ -1,0 +1,36 @@
+- generic [active] [ref=f7e1]:
+  - banner [ref=f7e2]:
+    - img [ref=f7e4]
+    - heading "受講科目登録・閲覧システム" [level=1] [ref=f7e8]
+    - generic:
+      - img
+    - navigation [ref=f7e9]:
+      - link "ホーム" [ref=f7e10] [cursor=pointer]:
+        - /url: /
+      - link "ログイン" [ref=f7e11] [cursor=pointer]:
+        - /url: /login.html
+  - generic [ref=f7e31]:
+    - heading "パスワード設定" [level=2] [ref=f7e32]
+    - paragraph [ref=f7e33]:
+      - text: 加藤教授 さん、初回ログインありがとうございます。
+      - text: 次回からのログインに使う
+      - strong [ref=f7e34]: パスワードを設定してください
+      - text: （6文字以上）。
+    - generic [ref=f7e35]:
+      - generic [ref=f7e36]: 新しいパスワード
+      - generic [ref=f7e37]:
+        - textbox "新しいパスワード" [ref=f7e38]
+        - button "👁" [ref=f7e39] [cursor=pointer]
+    - generic [ref=f7e40]:
+      - generic [ref=f7e41]: 確認のためもう一度
+      - generic [ref=f7e42]:
+        - textbox "確認のためもう一度" [ref=f7e43]
+        - button "👁" [ref=f7e44] [cursor=pointer]
+    - paragraph [ref=f7e45]
+    - button "設定して時間割編集へ" [ref=f7e46] [cursor=pointer]
+  - contentinfo [ref=f7e29]:
+    - generic:
+      - img
+    - generic [ref=f7e30]: © Olab
+    - generic:
+      - img

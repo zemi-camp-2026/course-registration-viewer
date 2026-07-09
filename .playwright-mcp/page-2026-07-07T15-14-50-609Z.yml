@@ -1,0 +1,45 @@
+- generic [active] [ref=f9e1]:
+  - banner [ref=f9e2]:
+    - img [ref=f9e4]
+    - heading "受講科目登録・閲覧システム" [level=1] [ref=f9e8]
+    - generic:
+      - img
+    - navigation [ref=f9e9]:
+      - link "ホーム" [ref=f9e10] [cursor=pointer]:
+        - /url: /
+      - link "管理" [ref=f9e11] [cursor=pointer]:
+        - /url: /admin.html
+      - link "👤 加藤教授" [ref=f9e12] [cursor=pointer]:
+        - /url: /profile.html
+      - link "ログアウト" [ref=f9e13] [cursor=pointer]:
+        - /url: "#"
+  - generic [ref=f9e14]:
+    - generic [ref=f9e16]:
+      - button "メンバー管理" [ref=f9e17] [cursor=pointer]
+      - button "年度更新" [ref=f9e18] [cursor=pointer]
+    - generic [ref=f9e19]:
+      - heading "メンバー管理" [level=2] [ref=f9e20]
+      - generic [ref=f9e22]:
+        - textbox "学番" [ref=f9e23]
+        - textbox "氏名" [ref=f9e24]
+        - combobox [ref=f9e25]:
+          - option "B3" [selected]
+          - option "B4"
+          - option "M1"
+          - option "M2"
+          - option "教員"
+        - button "追加" [ref=f9e26] [cursor=pointer]
+      - table [ref=f9e27]:
+        - rowgroup [ref=f9e28]:
+          - row "学番 氏名 学年" [ref=f9e29]:
+            - columnheader "学番" [ref=f9e30]
+            - columnheader "氏名" [ref=f9e31]
+            - columnheader "学年" [ref=f9e32]
+            - columnheader [ref=f9e33]
+        - rowgroup
+  - contentinfo [ref=f9e34]:
+    - generic:
+      - img
+    - generic [ref=f9e35]: © Olab
+    - generic:
+      - img

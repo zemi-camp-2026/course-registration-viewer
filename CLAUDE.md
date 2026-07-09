@@ -4,9 +4,12 @@
 
 ## 構成と方針
 
-- `server/` — APIサーバ。**Node.js標準機能のみ・外部依存ゼロ**が方針。npmパッケージを追加しない（E2Eテスト用の `e2e/` だけは例外）
-- `server/public/` — フロント5画面（素のHTML/CSS/JS）。テーマは設計書11.0（ウォームポップ）
-- 起動: `cd server && node server.js`（開発は `PORT=3100`）。サンプルデータ: `node seed.js`
+- `src/` — PHP バックエンド + フロントエンド。**chobi.net（共用ホスティング）にそのままアップロードする対象**
+  - `src/public/` — フロント5画面（素のHTML/CSS/JS）。テーマは設計書11.0（ウォームポップ）
+  - `src/routes/` — APIルートハンドラ（PHP）
+  - `src/index.php` — エントリポイント（ルーター）
+- Docker で開発: `docker compose up -d`（ポート 3000 で起動）
+- サンプルデータ: `docker compose exec web php seed.php`（開発モードではユーザー0件時に自動投入）
 
 ## コード編集後の検証ルール（必須・修正点がなくなるまで反復）
 
@@ -15,21 +18,22 @@
 1. **コードレビュー**: `code-reviewer` サブエージェント（`.claude/agents/code-reviewer.md`）を起動して変更をレビューさせる
 2. **ブラウザでの動作検証**: 変更した画面・機能を実際に操作して確認する
    - Playwright MCP が接続されていればそのブラウザツールで操作する
-   - 未接続なら `cd e2e && node run.mjs` でE2Eテストを実行する（サーバが `PORT=3100` で起動している必要あり。初回だけ `npm install`）
+   - 未接続なら `cd e2e && node run.mjs` でE2Eテストを実行する（Docker が `localhost:3000` で起動している必要あり。初回だけ `npm install`）
    - どちらも不可能な場合のみ、curl でのAPI検証＋構文チェックで代替し、その旨を報告する
 3. **判定**: レビューの指摘（軽微を除く）または動作検証の失敗が1つでもあれば、**それらを修正して 1 に戻る**
 4. レビューが「指摘なし」かつ動作検証が全項目パスになったら、はじめてコミットする
 
-- 修正が新たな問題を生むことがあるため、必ず「修正 → 再レビュー＋再検証」を回し切る（前回もレビュー後の修正で追加のXSS箇所が発覚した）。
+- 修正が新たな問題を生むことがあるため、必ず「修正 → 再レビュー＋再検証」を回し切る。
 - 各周回で「何を直したか・再検証の結果」を簡潔に記録し、最終的に何周で収束したかを報告する。
 - 機能を追加・変更したら、対応するE2Eケースを `e2e/run.mjs` に追加してから収束判定する。
 
-構文チェック（軽量・随時）: `node --check server/*.js server/public/app.js`。HTMLのインラインscriptは抽出してチェック。
+構文チェック（軽量・随時）: `docker compose exec web php -l src/*.php src/routes/*.php`
 
 ## 注意点
 
 - 編集系APIには必ず認可チェック（`requireLogin`/`requireSelf`/`requireAdmin`）を入れる。閲覧系は認証不要が仕様
 - フロントで氏名・科目名などユーザー入力を `innerHTML` に埋めるときはエスケープする
-- SQLは必ずプレースホルダ（`?`）を使う
+- SQLは必ずプリペアドステートメント（PDO + `?` プレースホルダ）を使う
 - ユーザー削除は物理削除で受講コマもCASCADEで消える設計。削除前の確認UIを省略しない
-- DBファイル（`server/olab.db`）はコミットしない（.gitignore済み）
+- `.env` はコミットしない（.gitignore済み）
+- 本番（chobi.net）では `src/config.php` の DB 接続情報を書き換えて使う

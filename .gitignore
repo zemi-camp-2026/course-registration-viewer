@@ -1,9 +1,5 @@
-# データベース本体はコミットしない（各環境で seed.js から生成する）
-server/olab.db
-server/olab.db-*
-*.db
-*.db-shm
-*.db-wal
+# 環境変数（DBパスワード等）
+.env
 
 # OS / エディタ
 .DS_Store
@@ -12,5 +8,10 @@ Thumbs.db
 # ログ・一時ファイル
 *.log
 nohup.out
+
+# Node.js (E2Eテスト用)
 node_modules/
 e2e/package-lock.json
+
+# Docker ボリューム
+db_data/

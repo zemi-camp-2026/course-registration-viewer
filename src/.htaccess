@@ -1,0 +1,18 @@
+RewriteEngine On
+
+# 実ファイルが public/ にあればそちらを返す
+RewriteCond %{REQUEST_URI} !^/api/
+RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f
+RewriteRule ^(.*)$ public/$1 [L]
+
+# ルート → public/index.html
+RewriteRule ^$ public/index.html [L]
+
+# .html 付きページ → public/ から返す
+RewriteCond %{REQUEST_URI} \.html$
+RewriteCond %{REQUEST_URI} !^/api/
+RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f
+RewriteRule ^(.*)$ public/$1 [L]
+
+# /api/* はすべて index.php へ
+RewriteRule ^api/(.*)$ index.php [QSA,L]
