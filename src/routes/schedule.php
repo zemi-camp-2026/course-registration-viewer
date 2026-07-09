@@ -1,5 +1,31 @@
 <?php
-// 時間割 API（4エンドポイント）
+// 時間割 API（5エンドポイント）
+
+// ---- 科目名サジェスト（認証不要） ----
+
+$routes[] = [
+    'method' => 'GET',
+    'path'   => '/api/subjects/suggest',
+    'handler' => function ($params, $query, $body) {
+        $quarterId = resolveQuarterId($query);
+        getQuarterOr404($quarterId);
+        $pdo  = getDB();
+        $stmt = $pdo->prepare(
+            'SELECT day_of_week, period, subject_name, COUNT(*) AS cnt
+             FROM schedule_entries
+             WHERE quarter_id = ? AND subject_name != \'\'
+             GROUP BY day_of_week, period, subject_name
+             ORDER BY cnt DESC, subject_name'
+        );
+        $stmt->execute([$quarterId]);
+        $grouped = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $key = $row['day_of_week'] . '-' . $row['period'];
+            $grouped[$key][] = ['name' => $row['subject_name'], 'count' => (int) $row['cnt']];
+        }
+        jsonResponse(200, ['cells' => $grouped]);
+    },
+];
 
 // ---- 閲覧（認証不要 = スポット表示にも使用） ----
 
@@ -46,7 +72,11 @@ $routes[] = [
                 'INSERT IGNORE INTO schedule_entries (user_id, quarter_id, day_of_week, period, subject_name) VALUES (?, ?, ?, ?, ?)'
             );
             foreach ($entries as $e) {
-                $ins->execute([(int) $user['id'], $quarterId, (int) $e['day'], (int) $e['period'], $e['subject_name'] ?? null]);
+                $subjectName = trim($e['subject_name'] ?? '');
+                if ($subjectName === '') {
+                    throw new HttpError(400, '科目名は必須です');
+                }
+                $ins->execute([(int) $user['id'], $quarterId, (int) $e['day'], (int) $e['period'], $subjectName]);
             }
             $pdo->commit();
         } catch (Exception $e) {
@@ -67,8 +97,11 @@ $routes[] = [
         getQuarterOr404($quarterId);
         $day         = $body['day'] ?? null;
         $period      = $body['period'] ?? null;
-        $subjectName = $body['subject_name'] ?? null;
+        $subjectName = trim($body['subject_name'] ?? '');
         validateCell($day, $period);
+        if ($subjectName === '') {
+            throw new HttpError(400, '科目名は必須です');
+        }
 
         $pdo  = getDB();
         $stmt = $pdo->prepare(

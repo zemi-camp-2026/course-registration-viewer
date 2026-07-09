@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS schedule_entries (
     quarter_id   INT          NOT NULL,
     day_of_week  INT          NOT NULL CHECK (day_of_week BETWEEN 1 AND 6),
     period       INT          NOT NULL CHECK (period BETWEEN 1 AND 5),
-    subject_name VARCHAR(255) DEFAULT NULL,
+    subject_name VARCHAR(255) NOT NULL,
     created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uq_user_quarter_day_period (user_id, quarter_id, day_of_week, period),

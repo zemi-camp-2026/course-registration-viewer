@@ -84,18 +84,44 @@ await step('新規登録できてそのまま入力画面へ', async () => {
   await page.waitForSelector('table.timetable');
 });
 
-await step('空きコマをクリックして科目を登録できる', async () => {
-  page.once('dialog', (d) => d.accept('E2E科目'));
-  await page.click('table.timetable tr:nth-child(2) td:first-of-type'); // 月1限
-  await page.waitForSelector('td.mine .subject-label');
-  const label = await page.textContent('td.mine .subject-label');
-  if (!label.includes('E2E科目')) throw new Error(`科目名が違う: ${label}`);
+await step('セルに科目名を入力して一括保存できる', async () => {
+  // 月1限のinputに科目名を入力
+  const input = page.locator('table.timetable tr:nth-child(2) td:first-of-type .cell-input');
+  await input.fill('E2E科目');
+  // 保存ボタンが有効になっていることを確認
+  await page.waitForFunction(() => !document.getElementById('save-btn').disabled);
+  await page.click('#save-btn');
+  // 保存後、値が保持されていることを確認
+  await page.waitForFunction(() => document.getElementById('save-status')?.textContent.includes('保存しました'));
+  const val = await input.inputValue();
+  if (val !== 'E2E科目') throw new Error(`保存後の値が違う: ${val}`);
 });
 
-await step('登録済みコマを「削除」で消せる', async () => {
-  page.once('dialog', (d) => d.accept('削除'));
-  await page.click('td.mine');
-  await page.waitForFunction(() => document.querySelectorAll('td.mine').length === 0);
+await step('セルを空にして保存するとコマが削除される', async () => {
+  const input = page.locator('table.timetable tr:nth-child(2) td:first-of-type .cell-input');
+  await input.fill('');
+  await page.click('#save-btn');
+  await page.waitForFunction(() => document.getElementById('save-status')?.textContent.includes('保存しました'));
+  const val = await input.inputValue();
+  if (val !== '') throw new Error(`削除後の値が空でない: ${val}`);
+});
+
+await step('科目サジェストのドロップダウンが表示される', async () => {
+  // まず科目を登録して、サジェスト候補があるようにする
+  const input = page.locator('table.timetable tr:nth-child(2) td:first-of-type .cell-input');
+  await input.fill('サジェスト確認用');
+  await page.click('#save-btn');
+  await page.waitForFunction(() => document.getElementById('save-status')?.textContent.includes('保存しました'));
+  // 同じセルをクリアしてフォーカスするとドロップダウンが出る
+  await input.fill('');
+  await input.focus();
+  await page.waitForSelector('.suggest-dropdown.open');
+  const items = await page.locator('.suggest-dropdown.open .suggest-item').count();
+  if (items === 0) throw new Error('サジェスト候補が表示されない');
+  // 後片付け: セルを空にして保存
+  await input.fill('');
+  await page.click('#save-btn');
+  await page.waitForFunction(() => document.getElementById('save-status')?.textContent.includes('保存しました'));
 });
 
 // ---- 画面5: プロフィール ----
