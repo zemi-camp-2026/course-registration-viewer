@@ -15,3 +15,6 @@ e2e/package-lock.json
 
 # Docker ボリューム
 db_data/
+
+# Playwright MCP
+.playwright-mcp/

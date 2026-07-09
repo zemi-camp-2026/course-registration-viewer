@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -10,17 +10,155 @@
 <div class="page">
   <div class="controls" id="controls">
     <div class="panel" style="font-weight:bold" id="who"></div>
-    <span class="panel" style="font-size:12px;color:#a97b3a">
-      空きコマをクリック → 登録（科目名は任意）／ 登録済みコマをクリック → 科目名の編集・削除
-    </span>
   </div>
   <h2 id="view-title" style="margin:14px 20px 0;font-size:16px;color:#a9743a"></h2>
   <div class="grid-wrap"><div id="grid"></div></div>
 </div>
+<div class="save-bar" id="save-bar">
+  <span id="save-status" class="save-status"></span>
+  <button class="btn btn-primary" id="save-btn" disabled>保存</button>
+</div>
+<div class="suggest-dropdown" id="suggest-dd"></div>
 
 <script src="/app.js"></script>
 <script>
 let tabs, me;
+let dirty = false;
+let initialValues = {};
+let suggestMap = {}; // { "1-1": [{name, count}, ...], ... }
+let activeInput = null;
+let activeIndex = -1;
+
+const dd = document.getElementById('suggest-dd');
+
+function setDirty(value) {
+  dirty = value;
+  const btn = document.getElementById('save-btn');
+  const status = document.getElementById('save-status');
+  btn.disabled = !value;
+  if (value) {
+    btn.textContent = '変更を保存';
+    btn.classList.add('btn-dirty');
+    status.textContent = '未保存';
+    status.style.color = '#e57200';
+  } else {
+    btn.textContent = '保存';
+    btn.classList.remove('btn-dirty');
+    if (!status.dataset.keep) status.textContent = '';
+  }
+}
+
+function onCellInput(e) {
+  const inputs = document.querySelectorAll('.cell-input');
+  let changed = false;
+  for (const inp of inputs) {
+    const key = inp.dataset.key;
+    if ((inp.value || '') !== (initialValues[key] || '')) {
+      changed = true;
+      break;
+    }
+  }
+  setDirty(changed);
+  showSuggest(e.target);
+}
+
+async function loadSuggestions(quarterId) {
+  try {
+    const data = await api(`/api/subjects/suggest?quarter=${quarterId}`);
+    suggestMap = data.cells || {};
+  } catch { suggestMap = {}; }
+}
+
+// ---- カスタムオートコンプリート ----
+
+function closeSuggest() {
+  dd.classList.remove('open');
+  activeInput = null;
+  activeIndex = -1;
+}
+
+function positionDropdown(input) {
+  const rect = input.getBoundingClientRect();
+  const spaceBelow = window.innerHeight - rect.bottom;
+  const openAbove = spaceBelow < 200;
+
+  dd.style.left = rect.left + 'px';
+  dd.style.width = rect.width + 'px';
+  if (openAbove) {
+    dd.style.top = 'auto';
+    dd.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+  } else {
+    dd.style.top = (rect.bottom + 4) + 'px';
+    dd.style.bottom = 'auto';
+  }
+}
+
+function showSuggest(input, filter = true) {
+  const key = input.dataset.key;
+  const items = suggestMap[key] || [];
+
+  let filtered;
+  if (filter) {
+    const q = input.value.trim().toLowerCase();
+    filtered = q ? items.filter((s) => s.name.toLowerCase().includes(q)) : items;
+  } else {
+    filtered = items;
+  }
+
+  if (filtered.length === 0) {
+    closeSuggest();
+    return;
+  }
+
+  dd.innerHTML = '';
+  filtered.forEach((s) => {
+    const div = document.createElement('div');
+    div.className = 'suggest-item';
+    div.title = s.name;
+    div.innerHTML = `<span class="suggest-item-name">${esc(s.name)}</span>`;
+    div.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      input.value = s.name;
+      closeSuggest();
+      onCellInput({ target: input });
+    });
+    dd.appendChild(div);
+  });
+
+  positionDropdown(input);
+  dd.classList.add('open');
+  activeInput = input;
+  activeIndex = -1;
+}
+
+function highlightItem(index) {
+  const items = dd.querySelectorAll('.suggest-item');
+  items.forEach((el, i) => el.classList.toggle('active', i === index));
+  if (items[index]) items[index].scrollIntoView({ block: 'nearest' });
+}
+
+function onSuggestKeydown(e) {
+  if (!dd.classList.contains('open')) return;
+  const items = dd.querySelectorAll('.suggest-item');
+  if (items.length === 0) return;
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    activeIndex = Math.min(activeIndex + 1, items.length - 1);
+    highlightItem(activeIndex);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    activeIndex = Math.max(activeIndex - 1, 0);
+    highlightItem(activeIndex);
+  } else if (e.key === 'Enter' && activeIndex >= 0) {
+    e.preventDefault();
+    items[activeIndex].dispatchEvent(new MouseEvent('mousedown'));
+  } else if (e.key === 'Escape') {
+    closeSuggest();
+  }
+}
+
+// ---- グリッド描画 ----
 
 async function refresh() {
   const q = tabs.selected;
@@ -33,62 +171,106 @@ async function refresh() {
   const head = table.insertRow();
   head.innerHTML = `<th class="corner">✎ 編集</th>` +
     data.days.map((d) => `<th>${DAY_NAMES[d]}</th>`).join('');
+
+  initialValues = {};
   for (const p of data.periods) {
     const row = table.insertRow();
     row.innerHTML = `<th class="period">${p}限</th>`;
     for (const d of data.days) {
       const td = row.insertCell();
-      td.className = 'clickable';
-      const entry = entryMap.get(`${d}-${p}`);
-      if (entry) {
-        td.classList.add('mine');
-        td.innerHTML = badge(me.grade_label) +
-          (entry.subject_name ? `<span class="subject-label">${esc(entry.subject_name)}</span>` : '');
-        td.addEventListener('click', () => editCell(d, p, entry));
-      } else {
-        td.addEventListener('click', () => addCell(d, p));
-      }
+      td.className = 'edit-cell';
+      const key = `${d}-${p}`;
+      const entry = entryMap.get(key);
+      const value = entry ? entry.subject_name : '';
+      initialValues[key] = value;
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'cell-input';
+      input.placeholder = `${DAY_NAMES[d]}${p}`;
+      input.autocomplete = 'off';
+      input.dataset.day = d;
+      input.dataset.period = p;
+      input.dataset.key = key;
+      input.value = value;
+      input.addEventListener('input', onCellInput);
+      input.addEventListener('focus', () => { input.placeholder = '科目名を入力'; showSuggest(input, false); });
+      input.addEventListener('blur', () => { input.placeholder = `${DAY_NAMES[d]}${p}`; closeSuggest(); });
+      input.addEventListener('keydown', onSuggestKeydown);
+      td.appendChild(input);
     }
   }
   document.getElementById('grid').replaceChildren(table);
+  setDirty(false);
+  await loadSuggestions(q.id);
 }
 
-async function addCell(day, period) {
-  const subject = prompt(`${DAY_NAMES[day]}曜${period}限に登録します。\n科目名（空欄でもOK）:`);
-  if (subject === null) return; // キャンセル
-  await api(`/api/users/${me.id}/schedule/cell?quarter=${tabs.selected.id}`, {
-    method: 'POST',
-    body: { day, period, subject_name: subject.trim() || null },
-  });
-  refresh();
-}
-
-async function editCell(day, period, entry) {
-  const input = prompt(
-    `${DAY_NAMES[day]}曜${period}限「${entry.subject_name ?? '(科目名なし)'}」\n` +
-    `科目名を変更するか、「削除」と入力するとコマを削除します:`,
-    entry.subject_name ?? ''
-  );
-  if (input === null) return;
-  if (input.trim() === '削除') {
-    await api(`/api/users/${me.id}/schedule/cell?quarter=${tabs.selected.id}&day=${day}&period=${period}`, { method: 'DELETE' });
-  } else {
-    await api(`/api/users/${me.id}/schedule/cell?quarter=${tabs.selected.id}`, {
-      method: 'POST',
-      body: { day, period, subject_name: input.trim() || null },
-    });
+async function save() {
+  const inputs = document.querySelectorAll('.cell-input');
+  const entries = [];
+  for (const inp of inputs) {
+    const v = inp.value.trim();
+    if (v !== '') {
+      entries.push({
+        day: parseInt(inp.dataset.day),
+        period: parseInt(inp.dataset.period),
+        subject_name: v,
+      });
+    }
   }
-  refresh();
+  const btn = document.getElementById('save-btn');
+  const status = document.getElementById('save-status');
+  btn.disabled = true;
+  btn.textContent = '保存中…';
+  status.textContent = '';
+  try {
+    await api(`/api/users/${me.id}/schedule?quarter=${tabs.selected.id}`, {
+      method: 'PUT',
+      body: { entries },
+    });
+    status.textContent = '✓ 保存しました';
+    status.style.color = '#2e9e44';
+    status.dataset.keep = '1';
+    await refresh();
+    delete status.dataset.keep;
+  } catch (err) {
+    status.textContent = `保存失敗: ${err.message}`;
+    status.style.color = '#d92f2f';
+    btn.textContent = '変更を保存';
+    btn.disabled = false;
+  }
 }
+
+window.addEventListener('beforeunload', (e) => {
+  if (dirty) e.preventDefault();
+});
+
+// ページ内リンク（ホーム・プロフィール等）クリック時も未保存警告
+document.addEventListener('click', (e) => {
+  if (!dirty) return;
+  const a = e.target.closest('a[href]');
+  if (!a || a.href === location.href) return;
+  if (!confirm('未保存の変更があります。破棄してページを移動しますか？')) {
+    e.preventDefault();
+  }
+});
 
 (async () => {
   const user = await renderChrome('edit');
   if (!user) { location.href = '/login.html'; return; }
-  if (!window.passwordSet) { location.href = '/login.html'; return; } // 初回設定が未完了
+  if (!window.passwordSet) { location.href = '/login.html'; return; }
   me = user;
   document.getElementById('who').textContent = `${me.name}（${me.grade_label}）`;
+  document.getElementById('save-btn').addEventListener('click', save);
+
   const controls = document.getElementById('controls');
-  tabs = await renderQuarterTabs(controls, refresh);
+  tabs = await renderQuarterTabs(controls, async (q, revert) => {
+    if (dirty && !confirm('未保存の変更があります。破棄して学期を切り替えますか？')) {
+      revert();
+      return;
+    }
+    await refresh();
+  });
   controls.prepend(controls.querySelector('.qtabs'));
   await refresh();
 })();

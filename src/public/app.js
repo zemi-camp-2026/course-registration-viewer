@@ -130,7 +130,7 @@ async function renderQuarterTabs(container, onChange) {
       b.textContent = `${q.quarter}Q`;
       b.title = q.label;
       if (q.id === selected.id) b.classList.add('active');
-      b.addEventListener('click', () => { selected = q; draw(); onChange(q); });
+      b.addEventListener('click', () => { const prev = selected; selected = q; onChange(q, () => { selected = prev; }); draw(); });
       box.appendChild(b);
     }
   }
