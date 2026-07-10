@@ -10,6 +10,14 @@
 <div class="page">
   <div class="controls" id="controls">
     <div class="panel" style="font-weight:bold" id="who"></div>
+    <div class="panel" id="copy-panel">
+      <span class="panel-title">コピー機能<span class="help-icon" tabindex="0">?<span class="help-tooltip">他のユーザーの時間割をコピーして自分の時間割に反映できます。ユーザーを選ぶとプレビューが表示されます。</span></span></span>
+      <select id="copy-src"><option value="">コピー元を選択…</option></select>
+      <span id="preview-actions" style="display:none">
+        <button class="btn btn-ghost btn-sm" id="preview-cancel">取り消し</button>
+        <button class="btn btn-primary btn-sm" id="preview-apply">コピー</button>
+      </span>
+    </div>
   </div>
   <h2 id="view-title" style="margin:14px 20px 0;font-size:16px;color:#a9743a"></h2>
   <div class="grid-wrap"><div id="grid"></div></div>
@@ -28,6 +36,9 @@ let initialValues = {};
 let suggestMap = {}; // { "1-1": [{name, count}, ...], ... }
 let activeInput = null;
 let activeIndex = -1;
+let previewing = false;
+let previewBackup = {};
+let previewDirtyBackup = false;
 
 const dd = document.getElementById('suggest-dd');
 
@@ -49,6 +60,7 @@ function setDirty(value) {
 }
 
 function onCellInput(e) {
+  if (previewing) return;
   const inputs = document.querySelectorAll('.cell-input');
   let changed = false;
   for (const inp of inputs) {
@@ -94,6 +106,7 @@ function positionDropdown(input) {
 }
 
 function showSuggest(input, filter = true) {
+  if (previewing) return;
   const key = input.dataset.key;
   const items = suggestMap[key] || [];
 
@@ -121,6 +134,7 @@ function showSuggest(input, filter = true) {
       input.value = s.name;
       closeSuggest();
       onCellInput({ target: input });
+      input.blur();
     });
     dd.appendChild(div);
   });
@@ -156,6 +170,113 @@ function onSuggestKeydown(e) {
   } else if (e.key === 'Escape') {
     closeSuggest();
   }
+}
+
+// ---- 他ユーザーからコピー（プレビュー付き） ----
+
+async function initCopyUI() {
+  const { users } = await api('/api/users');
+  const sel = document.getElementById('copy-src');
+
+  // 自分を除外し、同学年を先頭にソート
+  const others = users.filter((u) => u.id !== me.id);
+  others.sort((a, b) => {
+    const aMatch = a.grade === me.grade ? 0 : 1;
+    const bMatch = b.grade === me.grade ? 0 : 1;
+    return aMatch - bMatch || a.name.localeCompare(b.name, 'ja');
+  });
+
+  for (const u of others) {
+    const o = document.createElement('option');
+    o.value = u.id;
+    o.textContent = `${u.name}（${u.grade_label}）`;
+    sel.appendChild(o);
+  }
+
+  sel.addEventListener('change', () => { if (sel.value) startPreview(sel.value); });
+  document.getElementById('preview-cancel').addEventListener('click', cancelPreview);
+  document.getElementById('preview-apply').addEventListener('click', applyPreview);
+}
+
+async function startPreview(userId) {
+  try {
+    const data = await api(`/api/users/${userId}/schedule?quarter=${tabs.selected.id}`);
+    const entryMap = new Map(data.entries.map((e) => [`${e.day}-${e.period}`, e]));
+
+    // 現在の値をバックアップ
+    const inputs = document.querySelectorAll('.cell-input');
+    previewBackup = {};
+    previewDirtyBackup = dirty;
+    for (const inp of inputs) previewBackup[inp.dataset.key] = inp.value;
+    previewBackup._title = document.getElementById('view-title').textContent;
+
+    // プレビューデータをセット（読み取り専用）
+    for (const inp of inputs) {
+      const entry = entryMap.get(inp.dataset.key);
+      inp.value = entry ? entry.subject_name : '';
+      inp.readOnly = true;
+    }
+
+    // UI切替
+    previewing = true;
+    document.getElementById('grid').classList.add('previewing');
+    document.getElementById('preview-actions').style.display = '';
+    document.getElementById('copy-src').disabled = true;
+    document.getElementById('save-btn').style.display = 'none';
+    document.getElementById('view-title').textContent =
+      `${data.quarter.label} ｜ ${data.user.name} の時間割（プレビュー）`;
+
+    const status = document.getElementById('save-status');
+    status.textContent = 'コピーまたは取り消しを選択してください';
+    status.style.color = '#2b6cd4';
+  } catch (err) {
+    document.getElementById('copy-src').value = '';
+    const status = document.getElementById('save-status');
+    status.textContent = `読み込み失敗: ${err.message}`;
+    status.style.color = '#d92f2f';
+  }
+}
+
+function cancelPreview() {
+  const inputs = document.querySelectorAll('.cell-input');
+  for (const inp of inputs) {
+    inp.value = previewBackup[inp.dataset.key] || '';
+    inp.readOnly = false;
+  }
+  document.getElementById('view-title').textContent = previewBackup._title || '';
+  endPreview();
+  setDirty(previewDirtyBackup);
+  document.getElementById('copy-src').value = '';
+  const status = document.getElementById('save-status');
+  status.textContent = '';
+}
+
+function applyPreview() {
+  const inputs = document.querySelectorAll('.cell-input');
+  for (const inp of inputs) inp.readOnly = false;
+  document.getElementById('view-title').textContent = previewBackup._title || '';
+  endPreview();
+
+  // dirty 判定を更新
+  let changed = false;
+  for (const inp of inputs) {
+    if ((inp.value || '') !== (initialValues[inp.dataset.key] || '')) { changed = true; break; }
+  }
+  setDirty(changed);
+
+  const sel = document.getElementById('copy-src');
+  const name = sel.options[sel.selectedIndex]?.textContent || '';
+  const status = document.getElementById('save-status');
+  status.textContent = `${name} の時間割をコピーしました`;
+  status.style.color = '#2b6cd4';
+}
+
+function endPreview() {
+  previewing = false;
+  document.getElementById('grid').classList.remove('previewing');
+  document.getElementById('preview-actions').style.display = 'none';
+  document.getElementById('copy-src').disabled = false;
+  document.getElementById('save-btn').style.display = '';
 }
 
 // ---- グリッド描画 ----
@@ -194,7 +315,7 @@ async function refresh() {
       input.dataset.key = key;
       input.value = value;
       input.addEventListener('input', onCellInput);
-      input.addEventListener('focus', () => { input.placeholder = '科目名を入力'; showSuggest(input, false); });
+      input.addEventListener('focus', () => { if (previewing) { input.blur(); return; } input.placeholder = '科目名を入力'; showSuggest(input, false); });
       input.addEventListener('blur', () => { input.placeholder = `${DAY_NAMES[d]}${p}`; closeSuggest(); });
       input.addEventListener('keydown', onSuggestKeydown);
       td.appendChild(input);
@@ -242,12 +363,12 @@ async function save() {
 }
 
 window.addEventListener('beforeunload', (e) => {
-  if (dirty) e.preventDefault();
+  if (dirty || previewing) e.preventDefault();
 });
 
 // ページ内リンク（ホーム・プロフィール等）クリック時も未保存警告
 document.addEventListener('click', (e) => {
-  if (!dirty) return;
+  if (!dirty && !previewing) return;
   const a = e.target.closest('a[href]');
   if (!a || a.href === location.href) return;
   if (!confirm('未保存の変更があります。破棄してページを移動しますか？')) {
@@ -262,9 +383,11 @@ document.addEventListener('click', (e) => {
   me = user;
   document.getElementById('who').textContent = `${me.name}（${me.grade_label}）`;
   document.getElementById('save-btn').addEventListener('click', save);
+  initCopyUI();
 
   const controls = document.getElementById('controls');
   tabs = await renderQuarterTabs(controls, async (q, revert) => {
+    if (previewing) { revert(); return; }
     if (dirty && !confirm('未保存の変更があります。破棄して学期を切り替えますか？')) {
       revert();
       return;
