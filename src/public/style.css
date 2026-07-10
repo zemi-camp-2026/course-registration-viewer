@@ -301,8 +301,28 @@ table.timetable td.edit-cell { padding: 4px; }
 .badge-detail { display: block; font-size: 11px; color: #8a6b46; margin: 0 0 3px; }
 .subject-label { display: block; font-size: 12px; color: var(--text); font-weight: bold; margin-top: 2px; word-break: break-all; }
 
+/* 授業名モード: 科目カード */
+.subj-card {
+  background: #fff;
+  border: 2px solid var(--text);
+  border-radius: 12px;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  text-align: left;
+}
+.subj-card:last-child { margin-bottom: 0; }
+.subj-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+.subj-badges .badge {
+  cursor: help;
+}
+
 /* ---- カード / フォーム（ログイン・管理） ---- */
-.page { max-width: 1160px; margin: 0 auto; }
+.page { max-width: 1440px; margin: 0 auto; }
 .card {
   background: #fff;
   border: 1.5px solid #f2ddc0;

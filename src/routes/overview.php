@@ -7,7 +7,8 @@ $routes[] = [
     'handler' => function ($params, $query, $body) {
         $quarterId = resolveQuarterId($query);
         $q    = getQuarterOr404($quarterId);
-        $mode = ($query['mode'] ?? '') === 'detail' ? 'detail' : 'summary';
+        $modeRaw = $query['mode'] ?? '';
+        $mode = in_array($modeRaw, ['detail', 'subject'], true) ? $modeRaw : 'summary';
 
         // grades= が空で渡された場合は「全解除」= 何も表示しない（パラメータ無しなら全表示）
         $gradeFilter = null;
@@ -41,7 +42,7 @@ $routes[] = [
                 ];
             }
             $byCell[$key]['grades'][] = $label;
-            if ($mode === 'detail') {
+            if ($mode === 'detail' || $mode === 'subject') {
                 $byCell[$key]['entries'][] = [
                     'user_id'      => (int) $r['user_id'],
                     'name'         => $r['name'],
@@ -59,7 +60,7 @@ $routes[] = [
                 'grades' => $c['grades'],
                 'count'  => count($c['grades']),
             ];
-            if ($mode === 'detail') $cell['entries'] = $c['entries'];
+            if ($mode === 'detail' || $mode === 'subject') $cell['entries'] = $c['entries'];
             $cells[] = $cell;
         }
 

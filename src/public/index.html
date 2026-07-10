@@ -22,6 +22,7 @@
     <div class="panel">
       <select id="mode">
         <option value="summary">サマリ</option>
+        <option value="subject">授業名</option>
         <option value="detail">詳細</option>
       </select>
     </div>
@@ -44,7 +45,7 @@ function selectedGrades() {
 }
 
 // 行=時限 / 列=曜日 のグリッドを描画（軸転置後の向き・設計書2.2）
-function drawGrid({ days, periods, cellMap }) {
+function drawGrid({ days, periods, cellMap, mode }) {
   const highlight = document.getElementById('highlight').checked;
   const table = document.createElement('table');
   table.className = 'timetable';
@@ -61,7 +62,32 @@ function drawGrid({ days, periods, cellMap }) {
         td.className = 'free' + (highlight ? ' hl' : '');
         continue;
       }
-      if (cell.entries) { // 詳細表示
+      if (mode === 'subject' && cell.entries) {
+        // 科目名でグルーピング
+        const groups = new Map();
+        for (const e of cell.entries) {
+          const key = e.subject_name || '';
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key).push(e);
+        }
+        td.innerHTML = [...groups.entries()].map(([subj, members]) => {
+          // 学年でさらにグルーピングし、学年ごとに1バッジ
+          const byGrade = new Map();
+          for (const m of members) {
+            if (!byGrade.has(m.grade)) byGrade.set(m.grade, []);
+            byGrade.get(m.grade).push(m.name);
+          }
+          const grades = [...byGrade.keys()].sort((a, b) => (GRADE_ORDER[a] ?? 99) - (GRADE_ORDER[b] ?? 99));
+          const badges = grades.map((g) => {
+            const names = byGrade.get(g).join('、');
+            return `<span class="badge ${esc(g)}" title="${esc(names)}">${esc(g)}</span>`;
+          }).join('');
+          return `<div class="subj-card">` +
+            `<div class="subj-badges">${badges}</div>` +
+            `<div class="subject-label">${esc(subj)}</div>` +
+            `</div>`;
+        }).join('');
+      } else if (mode === 'detail' && cell.entries) {
         td.innerHTML = cell.entries.map((e) =>
           `${badge(e.grade)}<span class="badge-detail">${esc(e.name)}${e.subject_name ? '「' + esc(e.subject_name) + '」' : ''}</span>`
         ).join('');
@@ -86,7 +112,8 @@ async function refresh() {
       count: 1,
       entries: [{ name: data.user.name, grade: data.user.grade_label, subject_name: e.subject_name }],
     }]));
-    drawGrid({ days: data.days, periods: data.periods, cellMap });
+    const mode = document.getElementById('mode').value;
+    drawGrid({ days: data.days, periods: data.periods, cellMap, mode });
     return;
   }
 
@@ -94,7 +121,7 @@ async function refresh() {
   const grades = selectedGrades().join(',');
   const data = await api(`/api/overview?quarter=${q.id}&mode=${mode}&grades=${grades}`);
   title.textContent = `${data.quarter.label} ｜ 全体図`;
-  drawGrid({ days: data.days, periods: data.periods, cellMap: new Map(data.cells.map((c) => [`${c.day}-${c.period}`, c])) });
+  drawGrid({ days: data.days, periods: data.periods, cellMap: new Map(data.cells.map((c) => [`${c.day}-${c.period}`, c])), mode });
 }
 
 (async () => {

@@ -56,10 +56,22 @@ await step('ハイライトONで空きコマが黄色くなる', async () => {
   await page.uncheck('#highlight');
 });
 
+await step('授業名モードで科目カードが表示される', async () => {
+  await page.selectOption('#mode', 'subject');
+  await page.waitForSelector('.subj-card');
+  const labels = await page.locator('.subj-card .subject-label').count();
+  if (labels === 0) throw new Error('科目名ラベルが表示されない');
+  // バッジに氏名のtitle属性がある
+  const title = await page.locator('.subj-badges .badge').first().getAttribute('title');
+  if (!title) throw new Error('バッジにtitle属性がない');
+});
+
 await step('サマリ→詳細で氏名が表示される', async () => {
+  await page.selectOption('#mode', 'summary');
+  await page.waitForSelector('table.timetable');
   await page.selectOption('#mode', 'detail');
   await page.waitForSelector('.badge-detail');
-  await page.selectOption('#mode', 'summary');
+  await page.selectOption('#mode', 'summary'); // デフォルトに戻す
 });
 
 await step('スポット表示で個人の時間割になる', async () => {
