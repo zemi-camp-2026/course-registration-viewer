@@ -124,6 +124,56 @@ await step('科目サジェストのドロップダウンが表示される', as
   await page.waitForFunction(() => document.getElementById('save-status')?.textContent.includes('保存しました'));
 });
 
+await step('他ユーザーを選択するとプレビューが表示される', async () => {
+  // コピー元セレクトに他ユーザーが表示されていることを確認
+  const options = await page.locator('#copy-src option').count();
+  if (options < 2) throw new Error('コピー元の選択肢が少ない');
+  // 自分が含まれていないことを確認
+  const selfOption = await page.locator(`#copy-src option:text-is("${SNUM}")`).count();
+  if (selfOption > 0) throw new Error('自分がコピー元に含まれている');
+  // ユーザーを選択するとプレビューモードになる
+  const firstValue = await page.locator('#copy-src option:nth-child(2)').getAttribute('value');
+  await page.selectOption('#copy-src', firstValue);
+  await page.waitForSelector('#grid.previewing');
+  // セルにプレビューデータが表示される
+  await page.waitForFunction(() => {
+    const inputs = document.querySelectorAll('.cell-input');
+    return [...inputs].some((i) => i.value !== '');
+  });
+  // 取り消しボタンとコピーボタンが表示される
+  await page.waitForSelector('#preview-cancel:visible');
+  await page.waitForSelector('#preview-apply:visible');
+  // 取り消しでプレビューが解除されセルが元に戻る
+  await page.click('#preview-cancel');
+  await page.waitForFunction(() => !document.getElementById('grid').classList.contains('previewing'));
+  const allEmpty = await page.evaluate(() =>
+    [...document.querySelectorAll('.cell-input')].every((i) => i.value === ''));
+  if (!allEmpty) throw new Error('取り消し後にセルが空に戻っていない');
+});
+
+await step('プレビューからコピーを確定して保存できる', async () => {
+  // 再度プレビュー
+  const firstValue = await page.locator('#copy-src option:nth-child(2)').getAttribute('value');
+  await page.selectOption('#copy-src', firstValue);
+  await page.waitForSelector('#grid.previewing');
+  // コピーを確定
+  await page.click('#preview-apply');
+  await page.waitForFunction(() => !document.getElementById('grid').classList.contains('previewing'));
+  // 少なくとも1つのセルに値が入っていること
+  const hasValues = await page.evaluate(() =>
+    [...document.querySelectorAll('.cell-input')].some((i) => i.value !== ''));
+  if (!hasValues) throw new Error('コピー確定後にセルが空');
+  // 保存できること
+  await page.click('#save-btn');
+  await page.waitForFunction(() => document.getElementById('save-status')?.textContent.includes('保存しました'));
+  // 後片付け: 全セルを空にして保存
+  await page.evaluate(() => {
+    document.querySelectorAll('.cell-input').forEach((i) => { i.value = ''; i.dispatchEvent(new Event('input')); });
+  });
+  await page.click('#save-btn');
+  await page.waitForFunction(() => document.getElementById('save-status')?.textContent.includes('保存しました'));
+});
+
 // ---- 画面5: プロフィール ----
 await step('プロフィールで氏名を変更できる', async () => {
   await page.goto(`${BASE}/profile.html`);

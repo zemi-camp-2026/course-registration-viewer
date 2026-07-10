@@ -117,6 +117,59 @@ input.chk-hl { accent-color: #f5c400; }
 .btn-danger { background: var(--prof); color: #fff; }
 .btn-sm { padding: 5px 10px; font-size: 13px; border-radius: 8px; }
 
+/* コピー元選択 */
+#copy-panel select { min-width: 160px; }
+.panel-title { font-size: 13px; font-weight: bold; color: #a97b3a; white-space: nowrap; display: flex; align-items: center; }
+.help-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 4px;
+  border-radius: 50%;
+  background: #f2ddc0;
+  color: #a97b3a;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: help;
+  position: relative;
+  vertical-align: middle;
+}
+.help-tooltip {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #4a3520;
+  color: #fff;
+  font-size: 12px;
+  font-weight: normal;
+  padding: 8px 12px;
+  border-radius: 8px;
+  white-space: normal;
+  width: 220px;
+  line-height: 1.5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .2);
+  z-index: 200;
+}
+.help-icon:hover .help-tooltip,
+.help-icon:focus .help-tooltip { display: block; }
+
+/* プレビューモード（コピー元の時間割を閲覧中） */
+#grid.previewing .cell-input {
+  background: #e8f0fe;
+  border-color: #a8c7fa;
+  color: #1a56db;
+  cursor: default;
+  pointer-events: none;
+}
+#grid.previewing .cell-input:not(:placeholder-shown) {
+  background: #d3e3fd;
+  border-color: #7cacf8;
+}
+
 /* 保存バー（編集画面・画面下部に追従） */
 .save-bar {
   position: sticky;
