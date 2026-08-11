@@ -39,6 +39,7 @@
 <script src="/app.js"></script>
 <script>
 let tabs;
+let viewDays, viewPeriods; // 全体図基準のフィルタ済み曜日・時限（土曜/5限の自動非表示用）
 
 function selectedGrades() {
   return [...document.querySelectorAll('.gf:checked')].map((el) => el.value);
@@ -113,7 +114,7 @@ async function refresh() {
       entries: [{ name: data.user.name, grade: data.user.grade_label, subject_name: e.subject_name }],
     }]));
     const mode = document.getElementById('mode').value;
-    drawGrid({ days: data.days, periods: data.periods, cellMap, mode });
+    drawGrid({ days: viewDays || data.days, periods: viewPeriods || data.periods, cellMap, mode });
     return;
   }
 
@@ -121,7 +122,12 @@ async function refresh() {
   const grades = selectedGrades().join(',');
   const data = await api(`/api/overview?quarter=${q.id}&mode=${mode}&grades=${grades}`);
   title.textContent = `${data.quarter.label} ｜ 全体図`;
-  drawGrid({ days: data.days, periods: data.periods, cellMap: new Map(data.cells.map((c) => [`${c.day}-${c.period}`, c])), mode });
+  // 土曜・5限の自動非表示（閲覧画面のみ・設計書7.2.1(e)）
+  const usedDays = new Set(data.cells.map((c) => c.day));
+  const usedPeriods = new Set(data.cells.map((c) => c.period));
+  viewDays = data.days.filter((d) => d !== 6 || usedDays.has(6));
+  viewPeriods = data.periods.filter((p) => p !== 5 || usedPeriods.has(5));
+  drawGrid({ days: viewDays, periods: viewPeriods, cellMap: new Map(data.cells.map((c) => [`${c.day}-${c.period}`, c])), mode });
 }
 
 (async () => {
