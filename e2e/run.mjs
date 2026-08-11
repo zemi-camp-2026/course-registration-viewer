@@ -34,6 +34,12 @@ await step('全体図が表示され学年バッジがある', async () => {
   if (badges === 0) throw new Error('バッジが1つも無い');
 });
 
+await step('土曜にデータがなければ土曜列が非表示になる', async () => {
+  const headers = await page.locator('table.timetable tr:first-child th').allTextContents();
+  if (headers.includes('土')) throw new Error('土曜列が表示されている');
+  if (!headers.includes('金')) throw new Error('金曜列が見つからない');
+});
+
 await step('学期タブで切替できる（ページ遷移なし）', async () => {
   const before = await page.textContent('#view-title');
   await page.click('.qtabs button:nth-child(2)'); // 2Q
