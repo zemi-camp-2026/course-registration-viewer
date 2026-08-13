@@ -29,11 +29,40 @@
 
 構文チェック（軽量・随時）: `docker compose exec web php -l src/*.php src/routes/*.php`
 
+## 本番デプロイ（chobi.net）
+
+### 初回セットアップ
+
+1. `src/config.example.php` を `src/config.php` にコピーし、DB接続情報を書き換える
+   - `DB_NAME` / `DB_USER`: chobi.net のアカウント名
+   - `DB_PASS`: chobi.net のパスワード
+   - `DB_HOST` は `localhost` のまま
+   - `config.php` は `.gitignore` 済みなのでパスワードを直接書いてOK
+2. FFFTP 等で `src/` の**中身**を chobi.net のルートにアップロード（`src/` フォルダ自体は作らない）
+   - `.htaccess` も必須（FFFTP で「.ファイルの表示」をONにする。おそらくデフォルトで表示されている。）
+   - リポジトリのルートにある`init.sql` も他ファイルと同じ階層に配置する（テーブル作成用）
+3. ブラウザで `/seed.php` にアクセスしてテーブル作成＋初期データ投入
+4. **投入後、`seed.php` と `init.sql` を chobi.net から削除する**（誰でもデータ全消去できてしまうため）
+
+### デプロイ時の注意
+
+- `seed.php` / `init.sql` を本番に置きっぱなしにしない（データ破壊のリスク）
+- `config.php` はローカル専用。chobi.net にアップロードするがリポジトリには含めない
+- `config.example.php` がテンプレート。他の開発者はこれをコピーして使う
+- Docker 環境は環境変数で DB に接続するため、`config.php` のフォールバック値は開発に影響しない
+
+### chobi.net の制約
+
+- 容量 500MB / DB 10MB 目安
+- 転送量: 1時間 50MB、週 1GB
+- **180日間トップページ更新なしで規約違反**（Issue #13 で自動化予定）
+- 商用利用禁止（大学研究室の内部ツールなので該当しない）
+- 参考: [freeプラン](https://chobi.net/plan/order1.html) / [利用規約](https://chobi.net/plan/kiyaku.html) / [禁止事項](https://chobi.net/plan/ihan1.html)
+
 ## 注意点
 
 - 編集系APIには必ず認可チェック（`requireLogin`/`requireSelf`/`requireAdmin`）を入れる。閲覧系は認証不要が仕様
 - フロントで氏名・科目名などユーザー入力を `innerHTML` に埋めるときはエスケープする
 - SQLは必ずプリペアドステートメント（PDO + `?` プレースホルダ）を使う
 - ユーザー削除は物理削除で受講コマもCASCADEで消える設計。削除前の確認UIを省略しない
-- `.env` はコミットしない（.gitignore済み）
-- 本番（chobi.net）では `src/config.php` の DB 接続情報を書き換えて使う
+- `.env` / `config.php` はコミットしない（.gitignore済み）

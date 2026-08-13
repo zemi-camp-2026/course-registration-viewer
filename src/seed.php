@@ -1,12 +1,14 @@
 <?php
 // サンプルデータ投入（動作確認用）
 // CLI: php seed.php
+// ブラウザ: /seed.php にアクセス（テーブル作成＋データ投入）
 // サーバ起動時: 開発モードでユーザーが0件のとき index.php から populateSampleData() が呼ばれる
 
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/db.php';
 
 function populateSampleData(): array {
+    ensureSchema(); // db.php で定義: init.sql からテーブルを作成
     $pdo = getDB();
     $pdo->beginTransaction();
     try {
@@ -133,9 +135,17 @@ function buildSampleData(PDO $pdo): array {
     return ['users' => $nUsers, 'entries' => $nEntries];
 }
 
-// CLIとして直接実行されたとき
-if (php_sapi_name() === 'cli' && realpath($argv[0] ?? '') === realpath(__FILE__)) {
-    $r = populateSampleData();
-    echo "投入完了: users={$r['users']}, quarters=4, schedule_entries={$r['entries']}\n";
-    echo "仮ログイン用の学番例: B3001 / M1001 / T0001(教員・管理者)\n";
+// 直接実行されたとき（CLI またはブラウザ）
+if (realpath($argv[0] ?? '') === realpath(__FILE__) || php_sapi_name() !== 'cli') {
+    // index.php 経由で require された場合は実行しない
+    if (php_sapi_name() === 'cli' || basename($_SERVER['SCRIPT_FILENAME'] ?? '') === 'seed.php') {
+        $r = populateSampleData();
+        $msg = "投入完了: users={$r['users']}, quarters=4, schedule_entries={$r['entries']}";
+        if (php_sapi_name() === 'cli') {
+            echo "$msg\n仮ログイン用の学番例: B3001 / M1001 / T0001(教員・管理者)\n";
+        } else {
+            header('Content-Type: text/plain; charset=utf-8');
+            echo "$msg\n";
+        }
+    }
 }

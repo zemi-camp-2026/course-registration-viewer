@@ -31,11 +31,28 @@ function gradeLabel(array $user): string {
 }
 
 /**
+ * init.sql を実行してテーブルを作成する（IF NOT EXISTS なので既存なら何もしない）
+ */
+function ensureSchema(): void {
+    $paths = [__DIR__ . '/../init.sql', __DIR__ . '/init.sql'];
+    foreach ($paths as $path) {
+        if (file_exists($path)) {
+            getDB()->exec(file_get_contents($path));
+            return;
+        }
+    }
+}
+
+/**
  * ブートストラップ: 学期が1つもなければ現在の年度の1Q〜4Qを自動作成する
  */
 function bootstrapQuarters(): void {
     $pdo = getDB();
-    $n = (int) $pdo->query('SELECT COUNT(*) FROM quarters')->fetchColumn();
+    try {
+        $n = (int) $pdo->query('SELECT COUNT(*) FROM quarters')->fetchColumn();
+    } catch (PDOException $e) {
+        return; // テーブル未作成（seed.php で作成される）
+    }
     if ($n > 0) return;
 
     $month     = (int) date('n');
