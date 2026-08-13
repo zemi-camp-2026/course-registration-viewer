@@ -314,11 +314,30 @@ async function refresh() {
       input.dataset.period = p;
       input.dataset.key = key;
       input.value = value;
-      input.addEventListener('input', onCellInput);
-      input.addEventListener('focus', () => { if (previewing) { input.blur(); return; } input.placeholder = '科目名を入力'; showSuggest(input, false); });
-      input.addEventListener('blur', () => { input.placeholder = `${DAY_NAMES[d]}${p}`; closeSuggest(); });
+
+      const clearBtn = document.createElement('button');
+      clearBtn.type = 'button';
+      clearBtn.className = 'cell-clear';
+      clearBtn.textContent = '✕';
+      clearBtn.tabIndex = -1;
+      clearBtn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        input.value = '';
+        clearBtn.classList.remove('visible');
+        onCellInput({ target: input });
+        input.focus();
+      });
+
+      function updateClear() { clearBtn.classList.toggle('visible', !previewing && input.value.length > 0); }
+      input.addEventListener('input', (e) => { onCellInput(e); updateClear(); });
+      input.addEventListener('focus', () => { if (previewing) { input.blur(); return; } input.placeholder = '科目名を入力'; updateClear(); showSuggest(input, false); });
+      input.addEventListener('blur', () => { input.placeholder = `${DAY_NAMES[d]}${p}`; clearBtn.classList.remove('visible'); closeSuggest(); });
       input.addEventListener('keydown', onSuggestKeydown);
-      td.appendChild(input);
+      const wrap = document.createElement('span');
+      wrap.className = 'cell-wrap';
+      wrap.appendChild(input);
+      wrap.appendChild(clearBtn);
+      td.appendChild(wrap);
     }
   }
   document.getElementById('grid').replaceChildren(table);
