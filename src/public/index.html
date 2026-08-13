@@ -93,7 +93,11 @@ function drawGrid({ days, periods, cellMap, mode }) {
           `${badge(e.grade)}<span class="badge-detail">${esc(e.name)}${e.subject_name ? '「' + esc(e.subject_name) + '」' : ''}</span>`
         ).join('');
       } else {
-        td.innerHTML = sortGrades(cell.grades).map(badge).join('');
+        // サマリ: 学年バッジにホバーで氏名ツールチップ
+        const sorted = [...cell.entries].sort((a, b) => (GRADE_ORDER[a.grade] ?? 9) - (GRADE_ORDER[b.grade] ?? 9));
+        td.innerHTML = sorted.map((e) =>
+          `<span class="badge ${esc(e.grade)}" title="${esc(e.name)}">${esc(e.grade)}</span>`
+        ).join('');
       }
     }
   }

@@ -42,14 +42,12 @@ $routes[] = [
                 ];
             }
             $byCell[$key]['grades'][] = $label;
-            if ($mode === 'detail' || $mode === 'subject') {
-                $byCell[$key]['entries'][] = [
-                    'user_id'      => (int) $r['user_id'],
-                    'name'         => $r['name'],
-                    'grade'        => $label,
-                    'subject_name' => $r['subject_name'],
-                ];
-            }
+            $byCell[$key]['entries'][] = [
+                'user_id'      => (int) $r['user_id'],
+                'name'         => $r['name'],
+                'grade'        => $label,
+                'subject_name' => $r['subject_name'],
+            ];
         }
 
         $cells = [];
@@ -60,7 +58,7 @@ $routes[] = [
                 'grades' => $c['grades'],
                 'count'  => count($c['grades']),
             ];
-            if ($mode === 'detail' || $mode === 'subject') $cell['entries'] = $c['entries'];
+            $cell['entries'] = $c['entries'];
             $cells[] = $cell;
         }
 

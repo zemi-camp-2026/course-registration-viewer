@@ -40,7 +40,7 @@ async function renderChrome(active) {
   header.className = 'site-header';
   header.innerHTML = `
     <div class="logo">${FLASK_SVG}</div>
-    <h1>受講科目登録・閲覧システム</h1>
+    <h1><a href="/">受講科目登録・閲覧システム</a></h1>
     <div class="squiggle" style="display:flex;align-items:center">${SQUIGGLE_SVG('#ffffff')}</div>
     <nav id="site-nav"><a href="/">ホーム</a></nav>`;
   document.body.prepend(header);
