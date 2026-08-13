@@ -44,24 +44,24 @@ function buildSampleData(PDO $pdo): array {
         $userMap[$name] = (int) $pdo->lastInsertId();
     };
 
-    $addUser('T0001', '大谷紀子', 'teacher', null, 1);
-    $addUser('M2001', '瀧口翔太', 'student', 'M2');
-    $addUser('M2002', '安部竜也', 'student', 'M2');
-    $addUser('M1001', '土井博暉', 'student', 'M1');
-    $addUser('B4001', '吉田妃織', 'student', 'B4');
-    $addUser('B4002', '黒川創太', 'student', 'B4');
-    $addUser('B4003', '中尾有秀', 'student', 'B4');
-    $addUser('B4004', '矢部良亮', 'student', 'B4');
-    $addUser('B4005', '國井心太', 'student', 'B4');
-    $addUser('B3001', '松崎朱也花', 'student', 'B3');
-    $addUser('B3002', '岩澤 裕飛', 'student', 'B3');
-    $addUser('B3003', '日笠文音', 'student', 'B3');
-    $addUser('B3004', '菅野千彩音', 'student', 'B3');
-    $addUser('B3005', '大久保凌介', 'student', 'B3');
-    $addUser('B3006', '臼井柚楽々', 'student', 'B3');
-    $addUser('B3007', '工藤 新', 'student', 'B3');
-    $addUser('B3008', '井上陽向', 'student', 'B3');
-    $addUser('B3009', '樋口大空', 'student', 'B3');
+    $addUser('0000000', '大谷紀子', 'teacher', null, 1);
+    $addUser('2583017', '瀧口翔太', 'student', 'M2');
+    $addUser('2583001', '安部竜也', 'student', 'M2');
+    $addUser('2683020', '土井博暉', 'student', 'M1');
+    $addUser('2342113', '吉田妃織', 'student', 'B4');
+    $addUser('2342050', '黒川創太', 'student', 'B4');
+    $addUser('2342075', '中尾有秀', 'student', 'B4');
+    $addUser('2342111', '矢部良亮', 'student', 'B4');
+    $addUser('2342047', '國井心太', 'student', 'B4');
+    $addUser('2442080', '松崎朱也花', 'student', 'B3');
+    $addUser('2442010', '岩澤 裕飛', 'student', 'B3');
+    $addUser('2442068', '日笠文音', 'student', 'B3');
+    $addUser('2442042', '菅野千彩音', 'student', 'B3');
+    $addUser('2442015', '大久保凌介', 'student', 'B3');
+    $addUser('2342021', '臼井柚楽々', 'student', 'B3');
+    $addUser('2442029', '工藤 新', 'student', 'B3');
+    $addUser('2442008', '井上陽向', 'student', 'B3');
+    $addUser('2442069', '樋口大空', 'student', 'B3');
 
     // ---- 受講コマ（1Q: 実際の時間割データ） ----
     $insE = $pdo->prepare(
