@@ -1,5 +1,6 @@
-# 環境変数（DBパスワード等）
+# 環境変数・本番設定（DBパスワード等）
 .env
+src/config.php
 
 # OS / エディタ
 .DS_Store
