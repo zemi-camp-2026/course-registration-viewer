@@ -33,13 +33,13 @@ jobs:
           git push
 
       - name: Deploy to chobi.net
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftp
-          local-dir: ./src/
-          exclude: |
-            **/config.php
-            **/seed.php
+        run: |
+          lftp -u "${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }}" \
+               "${{ secrets.FTP_SERVER }}" <<SCRIPT
+          set ftp:passive-mode yes
+          mirror --reverse --delete \
+                 --exclude config.php \
+                 --exclude seed.php \
+                 src/ /
+          quit
+          SCRIPT
