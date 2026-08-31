@@ -32,6 +32,9 @@ jobs:
           git commit -m "chore: keep-alive 更新 $(date -u +%Y-%m-%d)"
           git push
 
+      - name: Install lftp
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
       - name: Deploy to chobi.net
         run: |
           lftp -u "${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }}" \
