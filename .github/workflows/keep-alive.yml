@@ -1,0 +1,44 @@
+name: Keep-alive (chobi.net 180日ルール対応)
+
+# 4ヶ月ごと（1月・5月・9月の1日 0:00 UTC）に実行
+# 最大間隔4ヶ月 = 約120日。180日制限に対して約60日のバッファを確保
+on:
+  schedule:
+    - cron: '0 0 1 1,5,9 *'
+  workflow_dispatch: # 手動実行も可能
+
+permissions:
+  contents: write
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update keep-alive timestamp
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          sed -i "s/<!-- keep-alive: [0-9-]* -->/<!-- keep-alive: $DATE -->/" src/public/index.html
+          grep -q "<!-- keep-alive: $DATE -->" src/public/index.html || \
+            { echo "ERROR: keep-alive comment not found"; exit 1; }
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/public/index.html
+          git diff --cached --quiet && echo "No changes" && exit 0
+          git commit -m "chore: keep-alive 更新 $(date -u +%Y-%m-%d)"
+          git push
+
+      - name: Deploy to chobi.net
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./src/
+          exclude: |
+            **/config.php
+            **/seed.php
