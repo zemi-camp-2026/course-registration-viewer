@@ -40,6 +40,6 @@ jobs:
           lftp -u "${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }}" \
                "${{ secrets.FTP_SERVER }}" <<SCRIPT
           set ftp:passive-mode yes
-          put src/public/index.html -o public/index.html
+          put src/public/index.html -o public_html/public/index.html
           quit
           SCRIPT

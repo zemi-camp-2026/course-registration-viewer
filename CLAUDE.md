@@ -38,7 +38,7 @@
    - `DB_PASS`: chobi.net のパスワード
    - `DB_HOST` は `localhost` のまま
    - `config.php` は `.gitignore` 済みなのでパスワードを直接書いてOK
-2. FFFTP 等で `src/` の**中身**を chobi.net のルートにアップロード（`src/` フォルダ自体は作らない）
+2. FFFTP 等で `src/` の**中身**を chobi.net の `public_html/` にアップロード（`src/` フォルダ自体は作らない）
    - `.htaccess` も必須（FFFTP で「.ファイルの表示」をONにする。おそらくデフォルトで表示されている。）
    - リポジトリのルートにある`init.sql` も他ファイルと同じ階層に配置する（テーブル作成用）
 3. ブラウザで `/seed.php` にアクセスしてテーブル作成＋初期データ投入
