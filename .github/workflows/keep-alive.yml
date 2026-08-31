@@ -35,14 +35,11 @@ jobs:
       - name: Install lftp
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
 
-      - name: Deploy to chobi.net
+      - name: Deploy index.html to chobi.net
         run: |
           lftp -u "${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }}" \
                "${{ secrets.FTP_SERVER }}" <<SCRIPT
           set ftp:passive-mode yes
-          mirror --reverse --delete \
-                 --exclude config.php \
-                 --exclude seed.php \
-                 src/ /
+          put src/public/index.html -o public/index.html
           quit
           SCRIPT
