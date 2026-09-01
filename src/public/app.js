@@ -3,10 +3,15 @@ const DAY_NAMES = { 1: '月', 2: '火', 3: '水', 4: '木', 5: '金', 6: '土' }
 const GRADE_ORDER = { Prof: 0, M2: 1, M1: 2, B4: 3, B3: 4 };
 
 async function api(path, opts = {}) {
+  const method = (opts.method ?? 'GET').toUpperCase();
+  const override = ['PUT', 'PATCH', 'DELETE'].includes(method);
+  const headers = { ...(opts.body ? { 'Content-Type': 'application/json' } : {}) };
+  if (override) headers['X-HTTP-Method-Override'] = method;
   const res = await fetch(path, {
     credentials: 'same-origin',
-    headers: opts.body ? { 'Content-Type': 'application/json' } : {},
+    headers,
     ...opts,
+    method: override ? 'POST' : method,
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
