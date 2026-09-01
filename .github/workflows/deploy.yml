@@ -1,0 +1,28 @@
+name: Deploy to chobi.net
+
+on:
+  push:
+    branches: [main]
+    paths: [src/**]
+  workflow_dispatch: # 手動実行も可能
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install lftp
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      - name: Deploy to chobi.net
+        run: |
+          lftp -u "${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }}" \
+               "${{ secrets.FTP_SERVER }}" <<SCRIPT
+          set ftp:passive-mode yes
+          mirror --reverse --verbose \
+                 --exclude-glob config.php \
+                 --exclude-glob seed.php \
+                 src/ public_html/
+          quit
+          SCRIPT
