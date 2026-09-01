@@ -19,3 +19,6 @@ db_data/
 
 # Playwright MCP
 .playwright-mcp/
+
+# ローカル専用のDocker上書き
+docker-compose.override.yml
