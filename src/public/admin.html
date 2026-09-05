@@ -29,8 +29,9 @@
       </div>
       <span class="error-msg" id="member-err" style="align-self:center"></span>
     </div>
+    <div id="reg-summary" style="background:#fdf6ec;border:1px solid #e8d5b7;border-radius:8px;padding:12px 16px;margin:0 0 12px;font-size:15px;line-height:1.6"></div>
     <table class="list" id="member-table">
-      <thead><tr><th>学番</th><th>氏名</th><th>学年</th><th></th></tr></thead>
+      <thead><tr><th>学番</th><th>氏名</th><th>学年</th><th>登録コマ（今期）</th><th></th></tr></thead>
       <tbody></tbody>
     </table>
   </div>
@@ -72,14 +73,29 @@ for (const [btn, pane] of [['tab-members', 'pane-members'], ['tab-rollover', 'pa
 // ---- タブ1: メンバー管理 ----
 async function loadMembers() {
   const { users } = await api('/api/users');
+
+  // サマリ表示
+  const total = users.length;
+  const registered = users.filter((u) => u.entry_count > 0);
+  const unregistered = users.filter((u) => u.entry_count === 0);
+  const summary = document.getElementById('reg-summary');
+  summary.innerHTML = `📋 登録済み: <strong>${registered.length}/${total}人</strong>` +
+    (unregistered.length > 0
+      ? `<br><span style="color:#c0392b">未登録: ${unregistered.map((u) => esc(u.name)).join('、')}</span>`
+      : `<br><span style="color:#27ae60">全員登録完了</span>`);
+
   const tbody = document.querySelector('#member-table tbody');
   tbody.innerHTML = '';
   for (const u of users) {
     const tr = document.createElement('tr');
+    const countCell = u.entry_count > 0
+      ? `<td>${esc(String(u.entry_count))}コマ</td>`
+      : '<td style="color:#c0392b;font-weight:bold">未登録</td>';
     tr.innerHTML = `
       <td>${esc(u.student_number)}</td>
       <td>${esc(u.name)}</td>
       <td>${badge(u.grade_label)}</td>
+      ${countCell}
       <td><button class="btn btn-danger btn-sm" data-act="del" ${u.id === me.id ? 'disabled' : ''}>削除</button></td>`;
     tr.querySelector('[data-act="del"]').addEventListener('click', async () => {
       const detail = await api(`/api/users/${u.id}`);
