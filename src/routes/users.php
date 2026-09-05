@@ -13,7 +13,27 @@ $routes[] = [
             $wanted = explode(',', $query['grade']);
             $rows = array_values(array_filter($rows, fn($u) => in_array(gradeLabel($u), $wanted, true)));
         }
-        jsonResponse(200, ['users' => array_map('publicUser', $rows)]);
+
+        // アクティブ学期の登録コマ数をユーザーごとに取得
+        $entryCounts = [];
+        $aq = $pdo->query('SELECT id FROM quarters WHERE is_active = 1 LIMIT 1')->fetch();
+        if ($aq) {
+            $stmt = $pdo->prepare(
+                'SELECT user_id, COUNT(*) AS cnt FROM schedule_entries WHERE quarter_id = ? GROUP BY user_id'
+            );
+            $stmt->execute([$aq['id']]);
+            foreach ($stmt->fetchAll() as $r) {
+                $entryCounts[(int) $r['user_id']] = (int) $r['cnt'];
+            }
+        }
+
+        $users = array_map(function ($u) use ($entryCounts) {
+            $pub = publicUser($u);
+            $pub['entry_count'] = $entryCounts[(int) $u['id']] ?? 0;
+            return $pub;
+        }, $rows);
+
+        jsonResponse(200, ['users' => $users]);
     },
 ];
 
