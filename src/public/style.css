@@ -225,6 +225,7 @@ table.timetable td {
   border: 1.5px solid #f4e3c8;
 }
 table.timetable td.free.hl { background: var(--free); border-color: #eed35a; }
+table.timetable td.hl { background: #fff8d6; border-color: #eed35a; }
 table.timetable td.clickable { cursor: pointer; }
 table.timetable td.clickable:hover { outline: 2.5px solid var(--header); outline-offset: -2px; }
 table.timetable td.mine { background: #fff7e6; border-color: var(--day-head-deep); }
@@ -416,6 +417,45 @@ table.list th { color: #a97b3a; font-size: 12px; }
   pointer-events: none;
 }
 .site-footer .squiggle.flip { transform: scaleX(-1); }
+
+/* 空きコマ検索パネル */
+.free-panel {
+  background: #fff;
+  border: 1.5px solid #f2ddc0;
+  border-radius: var(--radius);
+  margin: 10px 20px 0;
+  padding: 12px 16px;
+  box-shadow: 0 1px 3px rgba(200, 140, 40, .12);
+}
+.free-grades, .free-users {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 13px;
+}
+.free-grades { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #f4e3c8; }
+.free-grades label, .free-users label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+.free-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* おすすめゼミ時間 */
+.recommend-item {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.recommend-item:hover { background: #fff7e6; }
+.recommend-medal { font-size: 18px; margin-right: 4px; }
 
 @media (max-width: 640px) {
   .site-header h1 { font-size: 16px; }

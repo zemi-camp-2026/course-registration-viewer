@@ -21,6 +21,9 @@
       <label><input type="checkbox" id="highlight" class="chk-hl">ハイライト</label>
     </div>
     <div class="panel">
+      <button type="button" class="btn-ghost btn-sm" id="free-toggle">空きコマ検索 ▼</button>
+    </div>
+    <div class="panel">
       <select id="mode">
         <option value="summary">サマリ</option>
         <option value="subject">授業名</option>
@@ -33,6 +36,20 @@
     </div>
     <button class="btn btn-primary" id="go-edit" style="margin-left:auto">📅 時間割登録・編集</button>
   </div>
+  <!-- 空きコマ検索パネル（折りたたみ） -->
+  <div id="free-panel" class="free-panel" style="display:none">
+    <div id="free-grades" class="free-grades"></div>
+    <div id="free-users" class="free-users"></div>
+    <div class="free-actions">
+      <button class="btn btn-primary btn-sm" id="free-search">空きコマ検索</button>
+      <button class="btn btn-primary btn-sm" id="free-recommend" style="background:linear-gradient(180deg,#f9c93f 0%,#e5a200 100%)">おすすめ提案</button>
+      <button class="btn btn-ghost btn-sm" id="free-clear">クリア</button>
+      <span id="free-status" style="font-size:13px;color:#666"></span>
+    </div>
+    <!-- おすすめゼミ時間（オンデマンド表示） -->
+    <div id="recommend-section" style="display:none"></div>
+  </div>
+
   <h2 id="view-title" style="margin:14px 20px 0;font-size:16px;color:#a9743a"></h2>
   <div class="grid-wrap"><div id="grid"></div></div>
 </div>
@@ -41,6 +58,8 @@
 <script>
 let tabs;
 let viewDays, viewPeriods; // 全体図基準のフィルタ済み曜日・時限（土曜/5限の自動非表示用）
+let freeCells = null; // 空きコマ検索結果（Set of "day-period"）
+let allUsers = []; // ユーザー一覧キャッシュ
 
 function selectedGrades() {
   return [...document.querySelectorAll('.gf:checked')].map((el) => el.value);
@@ -60,10 +79,14 @@ function drawGrid({ days, periods, cellMap, mode }) {
     for (const d of days) {
       const td = row.insertCell();
       const cell = cellMap.get(`${d}-${p}`);
-      if (!cell || cell.count === 0) {
-        td.className = 'free' + (highlight ? ' hl' : '');
+      const isFree = !cell || cell.count === 0;
+      // 空きコマ検索中: freeCells に含まれるセルのみハイライト。未検索時はハイライトチェックで空きセルを強調
+      const hl = freeCells ? freeCells.has(`${d}-${p}`) : (highlight && isFree);
+      if (isFree) {
+        td.className = 'free' + (hl ? ' hl' : '');
         continue;
       }
+      if (hl) td.className = 'hl';
       if (mode === 'subject' && cell.entries) {
         // 科目名でグルーピング
         const groups = new Map();
@@ -73,7 +96,6 @@ function drawGrid({ days, periods, cellMap, mode }) {
           groups.get(key).push(e);
         }
         td.innerHTML = [...groups.entries()].map(([subj, members]) => {
-          // 学年でさらにグルーピングし、学年ごとに1バッジ
           const byGrade = new Map();
           for (const m of members) {
             if (!byGrade.has(m.grade)) byGrade.set(m.grade, []);
@@ -135,6 +157,141 @@ async function refresh() {
   drawGrid({ days: viewDays, periods: viewPeriods, cellMap: new Map(data.cells.map((c) => [`${c.day}-${c.period}`, c])), mode });
 }
 
+// ---- 空きコマ検索パネル ----
+function initFreePanel(users) {
+  const panel = document.getElementById('free-panel');
+  const toggle = document.getElementById('free-toggle');
+  toggle.addEventListener('click', () => {
+    const open = panel.style.display === 'none';
+    panel.style.display = open ? '' : 'none';
+    toggle.textContent = open ? '空きコマ検索 ▲' : '空きコマ検索 ▼';
+  });
+
+  // 学年一括チェックボックス
+  const gradeGroups = {};
+  for (const u of users) {
+    const g = u.grade_label;
+    if (!gradeGroups[g]) gradeGroups[g] = [];
+    gradeGroups[g].push(u);
+  }
+  const gradesDiv = document.getElementById('free-grades');
+  for (const g of Object.keys(gradeGroups).sort((a, b) => (GRADE_ORDER[a] ?? 9) - (GRADE_ORDER[b] ?? 9))) {
+    const label = document.createElement('label');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.dataset.grade = g;
+    cb.className = `chk-${g.toLowerCase()}`;
+    cb.addEventListener('change', () => {
+      document.querySelectorAll(`.free-user[data-grade="${g}"]`).forEach((el) => { el.checked = cb.checked; });
+    });
+    label.appendChild(cb);
+    label.append(`${g}全員`);
+    gradesDiv.appendChild(label);
+  }
+
+  // 個別ユーザーチェックボックス
+  const usersDiv = document.getElementById('free-users');
+  for (const u of users) {
+    const label = document.createElement('label');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'free-user';
+    cb.value = u.id;
+    cb.dataset.grade = u.grade_label;
+    label.appendChild(cb);
+    label.append(`${u.name}`);
+    usersDiv.appendChild(label);
+  }
+
+  // 検索ボタン
+  document.getElementById('free-search').addEventListener('click', async () => {
+    const ids = [...document.querySelectorAll('.free-user:checked')].map((el) => el.value);
+    if (ids.length === 0) {
+      document.getElementById('free-status').textContent = 'メンバーを選択してください';
+      return;
+    }
+    const q = tabs.selected;
+    const data = await api(`/api/free?quarter=${q.id}&users=${ids.join(',')}`);
+    freeCells = new Set(data.free_cells.map((c) => `${c.day}-${c.period}`));
+    document.getElementById('free-status').textContent = `共通空きコマ: ${data.free_cells.length}件`;
+    await refresh();
+  });
+
+  // クリアボタン
+  document.getElementById('free-clear').addEventListener('click', async () => {
+    freeCells = null;
+    document.querySelectorAll('.free-user, #free-grades input').forEach((el) => { el.checked = false; });
+    document.getElementById('free-status').textContent = '';
+    document.getElementById('recommend-section').style.display = 'none';
+    document.getElementById('recommend-section').innerHTML = '';
+    await refresh();
+  });
+
+  // おすすめ提案ボタン
+  document.getElementById('free-recommend').addEventListener('click', async () => {
+    const ids = [...document.querySelectorAll('.free-user:checked')].map((el) => el.value);
+    if (ids.length === 0) {
+      document.getElementById('free-status').textContent = 'メンバーを選択してください';
+      return;
+    }
+    const q = tabs.selected;
+    document.getElementById('free-status').textContent = '提案を計算中…';
+    try {
+      const data = await api(`/api/recommend?quarter=${q.id}&users=${ids.join(',')}`);
+      showRecommend(data);
+    } catch (e) {
+      document.getElementById('free-status').textContent = e.message || 'エラーが発生しました';
+    }
+  });
+}
+
+// ---- おすすめゼミ時間（オンデマンド） ----
+function showRecommend(data) {
+  const section = document.getElementById('recommend-section');
+  if (!data.recommendations || data.recommendations.length === 0) {
+    section.style.display = '';
+    section.innerHTML = '<p style="color:#666;margin:8px 0 0">おすすめの時間が見つかりませんでした</p>';
+    document.getElementById('free-status').textContent = '';
+    return;
+  }
+  const medals = ['🥇', '🥈', '🥉', '4.', '5.'];
+  const items = data.recommendations.map((r, i) => {
+    const dayName = DAY_NAMES[r.day] ?? r.day;
+    const absent = r.absent.length > 0
+      ? `<span style="color:#c0392b">（不参加: ${r.absent.map((n) => esc(n)).join('、')}）</span>`
+      : '<span style="color:#27ae60">全員参加可能</span>';
+    const d = r.score_detail ?? {};
+    const detail = [
+      `空き人数: ${esc(String(d.free ?? 0))}`,
+      `通学日: +${esc(String(d.day ?? 0))}`,
+      `授業間隔: ${esc(String(d.adjacent > 0 ? '+' : ''))}${esc(String(d.adjacent ?? 0))}`,
+      ...(d.penalty ? [`端時限: ${esc(String(d.penalty))}`] : []),
+    ].join('　');
+    return `<div class="recommend-item" data-day="${esc(String(r.day))}" data-period="${esc(String(r.period))}">
+      <span class="recommend-medal">${medals[i] ?? ''}</span>
+      <strong>${esc(dayName)}${esc(String(r.period))}限</strong>
+      <span style="color:#a97b3a;font-size:13px;font-weight:bold;margin:0 6px">${esc(String(r.score))}点</span>
+      — ${esc(String(r.free_count))}/${esc(String(r.total))}人参加可 ${absent}
+      <div style="font-size:11px;color:#999;margin:2px 0 0 28px">${detail}</div>
+    </div>`;
+  }).join('');
+  section.style.display = '';
+  section.innerHTML = `<h4 style="margin:10px 0 2px;color:#a97b3a;font-size:14px">おすすめゼミ時間</h4>`
+    + `<p style="margin:0 0 6px;font-size:11px;color:#999">空き人数: 参加できる人の割合(最大70, 欠員が増えるほど急減)｜通学日: その日に大学にいる人が多い(最大15)｜授業間隔: 隣接+1, 2コマ離れ0, 3コマ-1, 4コマ-2(-30〜+15)｜端時限: 1限/5限は-5</p>`
+    + items;
+  document.getElementById('free-status').textContent = '';
+
+  // 候補クリックでそのセルをハイライト
+  section.querySelectorAll('.recommend-item').forEach((el) => {
+    el.addEventListener('click', () => {
+      const key = `${el.dataset.day}-${el.dataset.period}`;
+      freeCells = new Set([key]);
+      document.getElementById('free-status').textContent = `${DAY_NAMES[el.dataset.day]}${el.dataset.period}限をハイライト中`;
+      refresh();
+    });
+  });
+}
+
 (async () => {
   const user = await renderChrome('home');
   document.getElementById('go-edit').addEventListener('click', () => {
@@ -142,10 +299,16 @@ async function refresh() {
   });
 
   const controls = document.getElementById('controls');
-  tabs = await renderQuarterTabs(controls, refresh);
+  tabs = await renderQuarterTabs(controls, () => {
+    freeCells = null;
+    const rs = document.getElementById('recommend-section');
+    rs.style.display = 'none'; rs.innerHTML = '';
+    refresh();
+  });
   controls.prepend(controls.querySelector('.qtabs')); // タブを先頭へ移動
 
   const { users } = await api('/api/users');
+  allUsers = users;
   const spot = document.getElementById('spot');
   for (const u of users) {
     const o = document.createElement('option');
@@ -153,6 +316,7 @@ async function refresh() {
     o.textContent = `${u.name}（${u.grade_label}）`;
     spot.appendChild(o);
   }
+  initFreePanel(users);
 
   document.querySelectorAll('#controls select, #controls input').forEach((el) =>
     el.addEventListener('change', refresh));
